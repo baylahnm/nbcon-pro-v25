@@ -10,6 +10,9 @@ import ProfessionalCredentialsScreen from '../screens/auth/ProfessionalCredentia
 import ServiceSpecializationScreen from '../screens/auth/ServiceSpecializationScreen';
 import ServiceAreaScreen from '../screens/auth/ServiceAreaScreen';
 import RateSettingScreen from '../screens/auth/RateSettingScreen';
+import WelcomeTutorialScreen from '../screens/auth/WelcomeTutorialScreen';
+import PermissionRequestsScreen from '../screens/auth/PermissionRequestsScreen';
+import AccountTypeConfirmationScreen from '../screens/auth/AccountTypeConfirmationScreen';
 
 export type AuthStackParamList = {
   Splash: undefined;
@@ -21,6 +24,9 @@ export type AuthStackParamList = {
   ServiceSpecialization: { userInfo: any };
   ServiceArea: { userInfo: any };
   RateSetting: { userInfo: any };
+  WelcomeTutorial: undefined;
+  PermissionRequests: undefined;
+  AccountTypeConfirmation: undefined;
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -44,6 +50,9 @@ const AuthNavigator: React.FC = () => {
       <Stack.Screen name="ServiceSpecialization" component={ServiceSpecializationScreen} />
       <Stack.Screen name="ServiceArea" component={ServiceAreaScreen} />
       <Stack.Screen name="RateSetting" component={RateSettingScreen} />
+      <Stack.Screen name="WelcomeTutorial" component={WelcomeTutorialScreen} />
+      <Stack.Screen name="PermissionRequests" component={PermissionRequestsScreen} />
+      <Stack.Screen name="AccountTypeConfirmation" component={AccountTypeConfirmationScreen} />
     </Stack.Navigator>
   );
 };
