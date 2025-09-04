@@ -1,16 +1,17 @@
 {
   "expo": {
-    "name": "nbcon-temp",
-    "slug": "nbcon-temp",
+    "name": "NBCON Pro",
+    "slug": "nbcon-pro",
     "version": "1.0.0",
+    "description": "Saudi Arabia's Engineering Marketplace - Connect certified engineers with clients",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1a1a1a"
     },
     "ios": {
       "supportsTablet": true

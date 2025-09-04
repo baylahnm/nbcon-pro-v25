@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(/D:\\nbcon-pro/**)",
+      "Bash(npx create-expo-app:*)",
+      "Read(/D:\\nbcon-pro/**)",
+      "Read(/D:\\nbcon-pro/**)",
+      "Bash(npm install:*)",
+      "Read(/D:\\nbcon-pro/**)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
