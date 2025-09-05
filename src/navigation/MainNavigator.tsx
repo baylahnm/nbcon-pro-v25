@@ -8,42 +8,94 @@ import { RootState } from '../store';
 import { UserRole } from '../types';
 import { COLORS } from '../constants';
 
-// Client Screens
-import ClientDashboardScreen from '../screens/client/ClientDashboardScreen';
-import BrowseServicesScreen from '../screens/client/BrowseServicesScreen';
-import JobRequestWizardScreen from '../screens/client/JobRequestWizardScreen';
-import JobTimelineScreen from '../screens/client/JobTimelineScreen';
-import PaymentsScreen from '../screens/client/PaymentsScreen';
+// Dashboard Screens
+import ClientDashboardScreen from '../screens/dashboard/ClientDashboardScreen';
+import EngineerDashboardScreen from '../screens/dashboard/EngineerDashboardScreen';
+import ServiceDiscoveryScreen from '../screens/dashboard/ServiceDiscoveryScreen';
 
-// Engineer Screens
-import EngineerDashboardScreen from '../screens/engineer/EngineerDashboardScreen';
-import JobListScreen from '../screens/engineer/JobListScreen';
-import EarningsScreen from '../screens/engineer/EarningsScreen';
-import ProfileScreen from '../screens/engineer/ProfileScreen';
+// Jobs Screens
+import JobPostingScreen from '../screens/jobs/JobPostingScreen';
+import JobBrowsingScreen from '../screens/jobs/JobBrowsingScreen';
+import JobDetailsScreen from '../screens/jobs/JobDetailsScreen';
+import JobApplicationScreen from '../screens/jobs/JobApplicationScreen';
 
-// Shared Screens
-import MessagesScreen from '../screens/shared/MessagesScreen';
-import NotificationsScreen from '../screens/shared/NotificationsScreen';
-import SettingsScreen from '../screens/shared/SettingsScreen';
-import JobDetailsScreen from '../screens/shared/JobDetailsScreen';
+// Payments Screens
+import PaymentMethodsScreen from '../screens/payments/PaymentMethodsScreen';
+import PaymentProcessingScreen from '../screens/payments/PaymentProcessingScreen';
+import PaymentHistoryScreen from '../screens/payments/PaymentHistoryScreen';
+import BillingDashboardScreen from '../screens/payments/BillingDashboardScreen';
+import SubscriptionPlansScreen from '../screens/payments/SubscriptionPlansScreen';
+import SubscriptionManagementScreen from '../screens/payments/SubscriptionManagementScreen';
+import InvoiceScreen from '../screens/payments/InvoiceScreen';
+
+// Messaging Screens
+import MessagingDashboardScreen from '../screens/messaging/MessagingDashboardScreen';
+import ChatScreen from '../screens/messaging/ChatScreen';
+import NotificationsScreen from '../screens/messaging/NotificationsScreen';
+
+// Profile Screens
+import ProfileScreen from '../screens/profile/ProfileScreen';
+import EditProfileScreen from '../screens/profile/EditProfileScreen';
+import SettingsScreen from '../screens/profile/SettingsScreen';
+import PortfolioScreen from '../screens/profile/PortfolioScreen';
+
+// Support Screens
+import HelpCenterScreen from '../screens/support/HelpCenterScreen';
+import ContactSupportScreen from '../screens/support/ContactSupportScreen';
+import FeedbackScreen from '../screens/support/FeedbackScreen';
+
+// Error & State Screens
+import ErrorScreen from '../screens/error/ErrorScreen';
+import NoInternetScreen from '../screens/error/NoInternetScreen';
+import ServerErrorScreen from '../screens/error/ServerErrorScreen';
+import NotFoundScreen from '../screens/error/NotFoundScreen';
+import MaintenanceScreen from '../screens/error/MaintenanceScreen';
 
 export type MainStackParamList = {
+  // Dashboard
   Dashboard: undefined;
-  Messages: undefined;
-  Profile: undefined;
-  Settings: undefined;
+  ClientDashboard: undefined;
+  EngineerDashboard: undefined;
+  ServiceDiscovery: undefined;
+  
+  // Jobs
+  JobPosting: undefined;
+  JobBrowsing: undefined;
   JobDetails: { jobId: string };
+  JobApplication: { jobId: string };
+  
+  // Payments
+  PaymentMethods: undefined;
+  PaymentProcessing: { amount?: number; jobId?: string; plan?: any };
+  PaymentHistory: undefined;
+  BillingDashboard: undefined;
+  SubscriptionPlans: undefined;
+  SubscriptionManagement: undefined;
+  Invoice: { invoiceId: string };
+  
+  // Messaging
+  Messages: undefined;
+  MessagingDashboard: undefined;
+  ChatScreen: { conversationId?: string; userId?: string };
   Notifications: undefined;
   
-  // Client specific
-  BrowseServices: undefined;
-  JobRequestWizard: undefined;
-  JobTimeline: { jobId: string };
-  Payments: undefined;
+  // Profile
+  Profile: undefined;
+  EditProfile: undefined;
+  Settings: undefined;
+  Portfolio: undefined;
   
-  // Engineer specific
-  JobList: undefined;
-  Earnings: undefined;
+  // Support
+  HelpCenter: undefined;
+  ContactSupport: undefined;
+  Feedback: undefined;
+  
+  // Error & States
+  Error: { error?: string; retry?: () => void };
+  NoInternet: undefined;
+  ServerError: undefined;
+  NotFound: undefined;
+  Maintenance: undefined;
 };
 
 const Tab = createBottomTabNavigator();
@@ -68,6 +120,9 @@ const ClientTabs: React.FC = () => {
             case 'Messages':
               iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
               break;
+            case 'Payments':
+              iconName = focused ? 'card' : 'card-outline';
+              break;
             case 'Profile':
               iconName = focused ? 'person' : 'person-outline';
               break;
@@ -87,8 +142,9 @@ const ClientTabs: React.FC = () => {
       })}
     >
       <Tab.Screen name="Dashboard" component={ClientDashboardScreen} />
-      <Tab.Screen name="Browse" component={BrowseServicesScreen} />
-      <Tab.Screen name="Messages" component={MessagesScreen} />
+      <Tab.Screen name="Browse" component={JobBrowsingScreen} />
+      <Tab.Screen name="Messages" component={MessagingDashboardScreen} />
+      <Tab.Screen name="Payments" component={BillingDashboardScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -135,9 +191,9 @@ const EngineerTabs: React.FC = () => {
       })}
     >
       <Tab.Screen name="Dashboard" component={EngineerDashboardScreen} />
-      <Tab.Screen name="Jobs" component={JobListScreen} />
-      <Tab.Screen name="Messages" component={MessagesScreen} />
-      <Tab.Screen name="Earnings" component={EarningsScreen} />
+      <Tab.Screen name="Jobs" component={JobBrowsingScreen} />
+      <Tab.Screen name="Messages" component={MessagingDashboardScreen} />
+      <Tab.Screen name="Earnings" component={BillingDashboardScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -151,30 +207,43 @@ const MainNavigator: React.FC = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={TabComponent} />
-      <Stack.Screen 
-        name="JobDetails" 
-        component={JobDetailsScreen}
-        options={{
-          headerShown: true,
-          title: 'Job Details',
-        }}
-      />
-      <Stack.Screen 
-        name="Settings" 
-        component={SettingsScreen}
-        options={{
-          headerShown: true,
-          title: 'Settings',
-        }}
-      />
-      <Stack.Screen 
-        name="Notifications" 
-        component={NotificationsScreen}
-        options={{
-          headerShown: true,
-          title: 'Notifications',
-        }}
-      />
+      
+      {/* Dashboard Screens */}
+      <Stack.Screen name="ServiceDiscovery" component={ServiceDiscoveryScreen} />
+      
+      {/* Job Screens */}
+      <Stack.Screen name="JobPosting" component={JobPostingScreen} />
+      <Stack.Screen name="JobDetails" component={JobDetailsScreen} />
+      <Stack.Screen name="JobApplication" component={JobApplicationScreen} />
+      
+      {/* Payment Screens */}
+      <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
+      <Stack.Screen name="PaymentProcessing" component={PaymentProcessingScreen} />
+      <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} />
+      <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansScreen} />
+      <Stack.Screen name="SubscriptionManagement" component={SubscriptionManagementScreen} />
+      <Stack.Screen name="Invoice" component={InvoiceScreen} />
+      
+      {/* Messaging Screens */}
+      <Stack.Screen name="ChatScreen" component={ChatScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      
+      {/* Profile Screens */}
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="Portfolio" component={PortfolioScreen} />
+      
+      {/* Support Screens */}
+      <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
+      <Stack.Screen name="ContactSupport" component={ContactSupportScreen} />
+      <Stack.Screen name="Feedback" component={FeedbackScreen} />
+      
+      {/* Error & State Screens */}
+      <Stack.Screen name="Error" component={ErrorScreen} />
+      <Stack.Screen name="NoInternet" component={NoInternetScreen} />
+      <Stack.Screen name="ServerError" component={ServerErrorScreen} />
+      <Stack.Screen name="NotFound" component={NotFoundScreen} />
+      <Stack.Screen name="Maintenance" component={MaintenanceScreen} />
     </Stack.Navigator>
   );
 };
