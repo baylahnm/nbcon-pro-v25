@@ -19,7 +19,8 @@
       "Read(/D:\\nbcon-pro/**)",
       "Read(/D:\\nbcon-pro\\src\\screens\\auth/**)",
       "Bash(npm run lint)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
