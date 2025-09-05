@@ -39,3 +39,7 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Documentation files
+README-App Build Features.txt
+README-App-full-Build.txt
