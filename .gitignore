@@ -43,3 +43,6 @@ yarn-error.*
 # Documentation files
 README-App Build Features.txt
 README-App-full-Build.txt
+
+# Whiteboard files
+whiteboard/
