@@ -32,6 +32,10 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# Security - Never commit sensitive tokens
+.cursor/mcp.json
 
 # typescript
 *.tsbuildinfo

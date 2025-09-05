@@ -11,7 +11,7 @@
           "--project-ref=wcshumodyfcbmzoveevw"
         ],
         "env": {
-          "SUPABASE_ACCESS_TOKEN": "sbp_1a63f8d2eed8fd7c13f82ea54161eb4a601394e8"
+          "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
         }
       }
     }
