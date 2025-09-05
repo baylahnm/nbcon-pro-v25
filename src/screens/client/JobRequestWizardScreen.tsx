@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { Language } from '../../types';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS } from '../../constants';
 import CustomInput from '../../components/forms/CustomInput';
 import CustomButton from '../../components/forms/CustomButton';
+import LocationServices from '../../utils/locationServices';
 
 interface JobRequestData {
   title: string;
@@ -39,12 +40,47 @@ const JobRequestWizardScreen: React.FC = () => {
     estimatedDuration: '',
     specialRequirements: '',
   });
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   const isArabic = language === Language.ARABIC;
   const theme = isDarkMode ? COLORS.dark : COLORS.light;
 
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
+
   const getText = (textObj: { en: string; ar: string }) => {
     return isArabic ? textObj.ar : textObj.en;
+  };
+
+  const getCurrentLocation = async () => {
+    try {
+      setIsGettingLocation(true);
+      const location = await LocationServices.getCurrentLocation();
+      
+      if (location) {
+        setCurrentLocation({ lat: location.latitude, lng: location.longitude });
+        
+        // Get address from coordinates
+        const address = await LocationServices.getAddressFromCoordinates(
+          location.latitude,
+          location.longitude
+        );
+        
+        if (address) {
+          setJobData(prev => ({ ...prev, location: address }));
+        }
+      }
+    } catch (error) {
+      console.log('Location error:', error);
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
+  const handleUseCurrentLocation = async () => {
+    await getCurrentLocation();
   };
 
   const steps = [
@@ -204,6 +240,41 @@ const JobRequestWizardScreen: React.FC = () => {
         leftIcon="location"
         required
       />
+
+      {/* Current Location Button */}
+      <TouchableOpacity
+        style={[styles.locationButton, { backgroundColor: theme.surface }]}
+        onPress={handleUseCurrentLocation}
+        disabled={isGettingLocation}
+      >
+        <Ionicons 
+          name={isGettingLocation ? "hourglass" : "locate"} 
+          size={20} 
+          color={isGettingLocation ? theme.textSecondary : COLORS.primary} 
+        />
+        <Text style={[
+          styles.locationButtonText, 
+          { 
+            color: isGettingLocation ? theme.textSecondary : COLORS.primary,
+            marginLeft: SPACING.sm 
+          }
+        ]}>
+          {isGettingLocation 
+            ? (isArabic ? 'جاري الحصول على الموقع...' : 'Getting location...')
+            : (isArabic ? 'استخدام الموقع الحالي' : 'Use Current Location')
+          }
+        </Text>
+      </TouchableOpacity>
+
+      {/* Location Status */}
+      {currentLocation && (
+        <View style={[styles.locationStatus, { backgroundColor: COLORS.success + '20' }]}>
+          <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
+          <Text style={[styles.locationStatusText, { color: COLORS.success }]}>
+            {isArabic ? 'تم تحديد الموقع بنجاح' : 'Location detected successfully'}
+          </Text>
+        </View>
+      )}
 
       <View style={styles.locationNote}>
         <Ionicons name="information-circle" size={20} color={COLORS.primary} />
@@ -458,6 +529,33 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.sizes.caption,
     marginLeft: SPACING.sm,
     flex: 1,
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    marginTop: SPACING.md,
+  },
+  locationButtonText: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  locationStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.sm,
+    marginTop: SPACING.sm,
+  },
+  locationStatusText: {
+    fontSize: TYPOGRAPHY.sizes.caption,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    marginLeft: SPACING.xs,
   },
   urgencySection: {
     marginTop: SPACING.lg,
