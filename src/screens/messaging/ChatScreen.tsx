@@ -3,8 +3,8 @@ import { View, Text, ScrollView, TextInput, Pressable, StyleSheet, KeyboardAvoid
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, SlideInUp, SlideInRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../../context/ThemeContext';
-import { useLanguage } from '../../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface Message {
   id: string;

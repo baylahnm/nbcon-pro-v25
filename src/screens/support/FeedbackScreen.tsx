@@ -3,9 +3,9 @@ import { View, Text, ScrollView, TextInput, Pressable, StyleSheet, Alert, Keyboa
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../../context/ThemeContext';
-import { useLanguage } from '../../../context/LanguageContext';
-import CustomButton from '../../../components/CustomButton';
+import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
+import CustomButton from '../../components/CustomButton';
 
 interface FeedbackType {
   id: string;

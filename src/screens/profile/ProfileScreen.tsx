@@ -3,9 +3,9 @@ import { View, Text, ScrollView, Pressable, StyleSheet, Image, Alert } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../../context/ThemeContext';
-import { useLanguage } from '../../../context/LanguageContext';
-import CustomButton from '../../../components/CustomButton';
+import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
+import CustomButton from '../../components/CustomButton';
 
 interface UserProfile {
   id: string;

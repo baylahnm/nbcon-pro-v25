@@ -23,7 +23,8 @@
       "Bash(find:*)",
       "Read(//c/Users/nass/OneDrive/Pictures/Screenshots/**)",
       "Bash(npx expo:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []
