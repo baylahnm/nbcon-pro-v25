@@ -16,7 +16,7 @@ import { RootState } from '../../store';
 import { setLanguage } from '../../store/slices/appSlice';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { Language } from '../../types';
-import { COLORS, SPACING, TYPOGRAPHY } from '../../constants';
+import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
 
 type SplashScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Splash'>;
 
