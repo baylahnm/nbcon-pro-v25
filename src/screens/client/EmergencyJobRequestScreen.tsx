@@ -1,630 +1,735 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
-  SafeAreaView,
+  ScrollView,
   TouchableOpacity,
   TextInput,
   Alert,
-  Animated,
+  Dimensions,
 } from 'react-native';
-import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
+import { RootState } from '../../store';
+import { Language, ServiceCategory, JobPriority } from '../../types';
+import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
+import CustomButton from '../../components/forms/CustomButton';
+
+const { width } = Dimensions.get('window');
 
 interface EmergencyService {
   id: string;
-  title: string;
+  title: { en: string; ar: string };
+  description: { en: string; ar: string };
   icon: string;
-  description: string;
-  responseTime: string;
-  multiplier: number;
+  color: string;
+  category: ServiceCategory;
+  basePrice: number;
+  emergencyMultiplier: number;
+  estimatedResponseTime: number; // in minutes
+  requirements: string[];
 }
 
+const EMERGENCY_SERVICES: EmergencyService[] = [
+  {
+    id: 'structural_emergency',
+    title: { en: 'Structural Emergency', ar: 'طوارئ هيكلية' },
+    description: {
+      en: 'Critical structural issues requiring immediate attention',
+      ar: 'مشاكل هيكلية حرجة تتطلب اهتماماً فورياً'
+    },
+    icon: 'warning',
+    color: '#F44336',
+    category: ServiceCategory.CIVIL,
+    basePrice: 2000,
+    emergencyMultiplier: 2.5,
+    estimatedResponseTime: 30,
+    requirements: ['Safety equipment', 'Emergency access', '24/7 availability'],
+  },
+  {
+    id: 'mep_emergency',
+    title: { en: 'MEP Emergency', ar: 'طوارئ الأنظمة الكهروميكانيكية' },
+    description: {
+      en: 'Critical MEP system failures requiring urgent repair',
+      ar: 'أعطال حرجة في الأنظمة الكهروميكانيكية تتطلب إصلاحاً عاجلاً'
+    },
+    icon: 'flash',
+    color: '#FF9800',
+    category: ServiceCategory.MEP,
+    basePrice: 1500,
+    emergencyMultiplier: 2.0,
+    estimatedResponseTime: 45,
+    requirements: ['Specialized tools', 'Emergency permits', 'Backup systems'],
+  },
+  {
+    id: 'safety_emergency',
+    title: { en: 'Safety Emergency', ar: 'طوارئ السلامة' },
+    description: {
+      en: 'Immediate safety hazard assessment and mitigation',
+      ar: 'تقييم ومكافحة المخاطر الأمنية الفورية'
+    },
+    icon: 'shield-checkmark',
+    color: '#FF5722',
+    category: ServiceCategory.HSE,
+    basePrice: 1200,
+    emergencyMultiplier: 2.0,
+    estimatedResponseTime: 20,
+    requirements: ['Safety certification', 'Emergency protocols', 'Risk assessment tools'],
+  },
+  {
+    id: 'survey_emergency',
+    title: { en: 'Emergency Survey', ar: 'مسح طارئ' },
+    description: {
+      en: 'Urgent site survey for emergency response planning',
+      ar: 'مسح موقع عاجل لتخطيط الاستجابة للطوارئ'
+    },
+    icon: 'map',
+    color: '#9C27B0',
+    category: ServiceCategory.SURVEYING,
+    basePrice: 1000,
+    emergencyMultiplier: 1.8,
+    estimatedResponseTime: 60,
+    requirements: ['Survey equipment', 'Site access', 'Emergency clearance'],
+  },
+];
+
 const EmergencyJobRequestScreen = () => {
-  const [selectedService, setSelectedService] = useState<string>('');
-  const [urgencyLevel, setUrgencyLevel] = useState<'urgent' | 'critical' | 'emergency'>('urgent');
-  const [location, setLocation] = useState('');
-  const [description, setDescription] = useState('');
-  const [contactPerson, setContactPerson] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pulseAnim] = useState(new Animated.Value(1));
+  const navigation = useNavigation();
+  const { language, isDarkMode } = useSelector((state: RootState) => state.app);
+  const [selectedService, setSelectedService] = useState<EmergencyService | null>(null);
+  const [urgencyLevel, setUrgencyLevel] = useState<'critical' | 'urgent' | 'high'>('urgent');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    location: '',
+    contactPhone: '',
+    additionalNotes: '',
+  });
 
-  const emergencyServices: EmergencyService[] = [
-    {
-      id: 'structural',
-      title: 'Structural Emergency',
-      icon: '🏗️',
-      description: 'Building collapse, structural damage, safety hazards',
-      responseTime: '15-30 min',
-      multiplier: 3.0
-    },
-    {
-      id: 'electrical',
-      title: 'Electrical Emergency',
-      icon: '⚡',
-      description: 'Power outages, electrical fires, short circuits',
-      responseTime: '10-20 min',
-      multiplier: 2.5
-    },
-    {
-      id: 'mep',
-      title: 'MEP Emergency',
-      icon: '🔧',
-      description: 'HVAC failures, plumbing emergencies, gas leaks',
-      responseTime: '20-40 min',
-      multiplier: 2.0
-    },
-    {
-      id: 'safety',
-      title: 'Safety Emergency',
-      icon: '⚠️',
-      description: 'Safety violations, hazardous conditions, accidents',
-      responseTime: '10-15 min',
-      multiplier: 4.0
-    },
-    {
-      id: 'fire',
-      title: 'Fire Safety',
-      icon: '🔥',
-      description: 'Fire system failures, evacuation issues, smoke detection',
-      responseTime: '5-15 min',
-      multiplier: 5.0
-    },
-    {
-      id: 'environmental',
-      title: 'Environmental',
-      icon: '🌡️',
-      description: 'Chemical spills, air quality issues, contamination',
-      responseTime: '15-25 min',
-      multiplier: 3.5
+  const isArabic = language === Language.ARABIC;
+  const theme = isDarkMode ? COLORS.dark : COLORS.light;
+
+  const getText = (textObj: { en: string; ar: string }) => {
+    return isArabic ? textObj.ar : textObj.en;
+  };
+
+  const getUrgencyConfig = (level: string) => {
+    switch (level) {
+      case 'critical':
+        return {
+          color: '#D32F2F',
+          label: { en: 'Critical', ar: 'حرج' },
+          description: { en: 'Life-threatening situation', ar: 'حالة تهدد الحياة' },
+          multiplier: 3.0,
+          responseTime: 15,
+        };
+      case 'urgent':
+        return {
+          color: '#F57C00',
+          label: { en: 'Urgent', ar: 'عاجل' },
+          description: { en: 'Requires immediate attention', ar: 'يتطلب اهتماماً فورياً' },
+          multiplier: 2.0,
+          responseTime: 30,
+        };
+      case 'high':
+        return {
+          color: '#FFA000',
+          label: { en: 'High Priority', ar: 'أولوية عالية' },
+          description: { en: 'Needs attention within hours', ar: 'يحتاج اهتمام خلال ساعات' },
+          multiplier: 1.5,
+          responseTime: 60,
+        };
+      default:
+        return {
+          color: '#F57C00',
+          label: { en: 'Urgent', ar: 'عاجل' },
+          description: { en: 'Requires immediate attention', ar: 'يتطلب اهتماماً فورياً' },
+          multiplier: 2.0,
+          responseTime: 30,
+        };
     }
-  ];
+  };
 
-  const urgencyLevels = [
-    { id: 'urgent', label: 'Urgent', color: '#FF9800', description: 'Within 1 hour' },
-    { id: 'critical', label: 'Critical', color: '#F44336', description: 'Within 30 minutes' },
-    { id: 'emergency', label: 'EMERGENCY', color: '#D32F2F', description: 'Immediate response' }
-  ];
+  const calculateEmergencyPrice = () => {
+    if (!selectedService) return 0;
+    const urgencyConfig = getUrgencyConfig(urgencyLevel);
+    return Math.round(selectedService.basePrice * urgencyConfig.multiplier);
+  };
 
-  useEffect(() => {
-    // Create pulsing animation for emergency mode
-    if (urgencyLevel === 'emergency') {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    }
-  }, [urgencyLevel]);
+  const calculateResponseTime = () => {
+    if (!selectedService) return 0;
+    const urgencyConfig = getUrgencyConfig(urgencyLevel);
+    return Math.min(selectedService.estimatedResponseTime, urgencyConfig.responseTime);
+  };
 
-  const handleSubmit = async () => {
-    if (!selectedService || !location || !description || !contactPerson || !contactPhone) {
-      Alert.alert('Missing Information', 'Please fill in all required fields.');
+  const handleServiceSelect = (service: EmergencyService) => {
+    setSelectedService(service);
+  };
+
+  const handleUrgencySelect = (level: 'critical' | 'urgent' | 'high') => {
+    setUrgencyLevel(level);
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmitEmergencyRequest = () => {
+    if (!selectedService) {
+      Alert.alert(
+        isArabic ? 'خطأ' : 'Error',
+        isArabic ? 'يرجى اختيار نوع الخدمة الطارئة' : 'Please select an emergency service type'
+      );
       return;
     }
 
-    setIsSubmitting(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+    if (!formData.title.trim() || !formData.description.trim() || !formData.location.trim()) {
       Alert.alert(
-        'Emergency Request Submitted',
-        `Your ${urgencyLevel} request has been submitted. Our nearest available engineer will contact you within ${getResponseTime()}.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate back or to tracking screen
-            }
-          }
-        ]
+        isArabic ? 'خطأ' : 'Error',
+        isArabic ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill in all required fields'
       );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to submit emergency request. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+      return;
     }
+
+    // Simulate emergency request submission
+    Alert.alert(
+      isArabic ? 'تم إرسال الطلب الطارئ' : 'Emergency Request Submitted',
+      isArabic 
+        ? 'تم إرسال طلبك الطارئ بنجاح. سيتم إشعار المهندسين المتاحين فوراً.'
+        : 'Your emergency request has been submitted successfully. Available engineers will be notified immediately.',
+      [
+        {
+          text: isArabic ? 'موافق' : 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]
+    );
   };
 
-  const getResponseTime = () => {
-    const service = emergencyServices.find(s => s.id === selectedService);
-    return service?.responseTime || '15-30 min';
-  };
-
-  const getEstimatedCost = () => {
-    const basePrice = 500; // SAR
-    const service = emergencyServices.find(s => s.id === selectedService);
-    const multiplier = service?.multiplier || 1;
-    const urgencyMultiplier = urgencyLevel === 'emergency' ? 2 : urgencyLevel === 'critical' ? 1.5 : 1;
-    return Math.round(basePrice * multiplier * urgencyMultiplier);
-  };
-
-  const renderServiceCard = (service: EmergencyService) => (
-    <TouchableOpacity
-      key={service.id}
-      style={[
-        styles.serviceCard,
-        selectedService === service.id && styles.selectedServiceCard
-      ]}
-      onPress={() => setSelectedService(service.id)}
-    >
-      <View style={styles.serviceHeader}>
-        <Text style={styles.serviceIcon}>{service.icon}</Text>
-        <View style={styles.serviceInfo}>
-          <Text style={styles.serviceTitle}>{service.title}</Text>
-          <Text style={styles.serviceResponse}>Response: {service.responseTime}</Text>
-        </View>
-        <View style={styles.multiplierBadge}>
-          <Text style={styles.multiplierText}>{service.multiplier}x</Text>
-        </View>
-      </View>
-      <Text style={styles.serviceDescription}>{service.description}</Text>
-    </TouchableOpacity>
-  );
-
-  const renderUrgencyLevel = (level: any) => (
-    <TouchableOpacity
-      key={level.id}
-      style={[
-        styles.urgencyCard,
-        { borderColor: level.color },
-        urgencyLevel === level.id && { backgroundColor: level.color + '20' }
-      ]}
-      onPress={() => setUrgencyLevel(level.id)}
-    >
-      <View style={styles.urgencyHeader}>
-        <Text style={[styles.urgencyLabel, { color: level.color }]}>{level.label}</Text>
-        {urgencyLevel === level.id && level.id === 'emergency' && (
-          <Animated.View style={[styles.emergencyBadge, { transform: [{ scale: pulseAnim }] }]}>
-            <MaterialIcons name="warning" size={16} color="#fff" />
-          </Animated.View>
-        )}
-      </View>
-      <Text style={styles.urgencyDescription}>{level.description}</Text>
-    </TouchableOpacity>
-  );
+  const urgencyConfig = getUrgencyConfig(urgencyLevel);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Emergency Header */}
       <LinearGradient
-        colors={urgencyLevel === 'emergency' ? ['#D32F2F', '#F44336'] : ['#1a1a2e', '#16213e']}
-        style={styles.header}
+        colors={[urgencyConfig.color, urgencyConfig.color + 'CC']}
+        style={styles.emergencyHeader}
       >
-        <View style={styles.headerContent}>
-          <TouchableOpacity style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          <View style={styles.headerTitle}>
-            <Text style={styles.headerTitleText}>Emergency Request</Text>
-            {urgencyLevel === 'emergency' && (
-              <Text style={styles.headerSubtitle}>🚨 IMMEDIATE RESPONSE</Text>
-            )}
+        <View style={styles.emergencyHeaderContent}>
+          <View style={styles.emergencyIconContainer}>
+            <Ionicons name="warning" size={32} color={COLORS.white} />
           </View>
-          <TouchableOpacity style={styles.helpButton}>
-            <MaterialIcons name="help-outline" size={24} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.emergencyHeaderInfo}>
+            <Text style={styles.emergencyTitle}>
+              {isArabic ? 'طلب خدمة طارئة' : 'Emergency Service Request'}
+            </Text>
+            <Text style={styles.emergencySubtitle}>
+              {isArabic 
+                ? 'احصل على مساعدة فورية من المهندسين المعتمدين'
+                : 'Get immediate help from certified engineers'
+              }
+            </Text>
+          </View>
         </View>
       </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Warning Banner */}
-        <View style={[styles.warningBanner, { backgroundColor: urgencyLevel === 'emergency' ? '#D32F2F' : '#FF9800' }]}>
-          <MaterialIcons name="warning" size={24} color="#fff" />
-          <Text style={styles.warningText}>
-            Emergency services incur additional charges. Estimated cost: {getEstimatedCost()} SAR
-          </Text>
-        </View>
-
         {/* Urgency Level Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Urgency Level</Text>
-          <View style={styles.urgencyGrid}>
-            {urgencyLevels.map(renderUrgencyLevel)}
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            {isArabic ? 'مستوى الأولوية' : 'Priority Level'}
+          </Text>
+          <Text style={[styles.sectionDescription, { color: theme.textSecondary }]}>
+            {isArabic 
+              ? 'اختر مستوى الأولوية لطلبك الطارئ'
+              : 'Select the priority level for your emergency request'
+            }
+          </Text>
+          
+          <View style={styles.urgencyOptions}>
+            {[
+              { key: 'critical', label: { en: 'Critical', ar: 'حرج' }, icon: 'alert-circle' },
+              { key: 'urgent', label: { en: 'Urgent', ar: 'عاجل' }, icon: 'warning' },
+              { key: 'high', label: { en: 'High Priority', ar: 'أولوية عالية' }, icon: 'flag' },
+            ].map((option) => {
+              const config = getUrgencyConfig(option.key);
+              const isSelected = urgencyLevel === option.key;
+              
+              return (
+                <TouchableOpacity
+                  key={option.key}
+                  style={[
+                    styles.urgencyOption,
+                    isSelected && { borderColor: config.color, backgroundColor: config.color + '20' }
+                  ]}
+                  onPress={() => handleUrgencySelect(option.key as any)}
+                >
+                  <View style={[styles.urgencyIcon, { backgroundColor: config.color }]}>
+                    <Ionicons name={option.icon as any} size={20} color={COLORS.white} />
+                  </View>
+                  <View style={styles.urgencyInfo}>
+                    <Text style={[styles.urgencyLabel, { color: theme.text }]}>
+                      {getText(option.label)}
+                    </Text>
+                    <Text style={[styles.urgencyDescription, { color: theme.textSecondary }]}>
+                      {getText(config.description)}
+                    </Text>
+                  </View>
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle" size={24} color={config.color} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
-        {/* Emergency Service Type */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Emergency Service Type</Text>
-          {emergencyServices.map(renderServiceCard)}
+        {/* Emergency Service Selection */}
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            {isArabic ? 'نوع الخدمة الطارئة' : 'Emergency Service Type'}
+          </Text>
+          <Text style={[styles.sectionDescription, { color: theme.textSecondary }]}>
+            {isArabic 
+              ? 'اختر نوع الخدمة التي تحتاجها بشكل عاجل'
+              : 'Select the type of emergency service you need'
+            }
+          </Text>
+          
+          <View style={styles.serviceGrid}>
+            {EMERGENCY_SERVICES.map((service) => (
+              <TouchableOpacity
+                key={service.id}
+                style={[
+                  styles.serviceCard,
+                  selectedService?.id === service.id && { borderColor: service.color }
+                ]}
+                onPress={() => handleServiceSelect(service)}
+              >
+                <View style={[styles.serviceIcon, { backgroundColor: service.color }]}>
+                  <Ionicons name={service.icon as any} size={24} color={COLORS.white} />
+                </View>
+                <Text style={[styles.serviceTitle, { color: theme.text }]}>
+                  {getText(service.title)}
+                </Text>
+                <Text style={[styles.serviceDescription, { color: theme.textSecondary }]}>
+                  {getText(service.description)}
+                </Text>
+                <View style={styles.serviceDetails}>
+                  <View style={styles.serviceDetailItem}>
+                    <Ionicons name="time-outline" size={14} color={theme.textSecondary} />
+                    <Text style={[styles.serviceDetailText, { color: theme.textSecondary }]}>
+                      {service.estimatedResponseTime} {isArabic ? 'دقيقة' : 'min'}
+                    </Text>
+                  </View>
+                  <View style={styles.serviceDetailItem}>
+                    <Ionicons name="cash-outline" size={14} color={theme.textSecondary} />
+                    <Text style={[styles.serviceDetailText, { color: theme.textSecondary }]}>
+                      SAR {service.basePrice.toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+                {selectedService?.id === service.id && (
+                  <View style={styles.selectedIndicator}>
+                    <Ionicons name="checkmark-circle" size={20} color={service.color} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
-        {/* Location Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Location Details *</Text>
-          <View style={styles.inputContainer}>
-            <MaterialIcons name="location-on" size={20} color="#888" />
+        {/* Emergency Details Form */}
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            {isArabic ? 'تفاصيل الطلب الطارئ' : 'Emergency Request Details'}
+          </Text>
+          
+          <View style={styles.formGroup}>
+            <Text style={[styles.inputLabel, { color: theme.text }]}>
+              {isArabic ? 'عنوان المشكلة *' : 'Problem Title *'}
+            </Text>
             <TextInput
-              style={styles.textInput}
-              placeholder="Exact location address..."
-              placeholderTextColor="#666"
-              value={location}
-              onChangeText={setLocation}
-              multiline
+              style={[styles.textInput, { 
+                backgroundColor: theme.surface,
+                color: theme.text,
+                borderColor: theme.border 
+              }]}
+              value={formData.title}
+              onChangeText={(value) => handleInputChange('title', value)}
+              placeholder={isArabic ? 'وصف مختصر للمشكلة' : 'Brief description of the problem'}
+              placeholderTextColor={theme.textSecondary}
             />
           </View>
-          <TouchableOpacity style={styles.useCurrentLocation}>
-            <MaterialIcons name="my-location" size={16} color="#4CAF50" />
-            <Text style={styles.useCurrentLocationText}>Use Current Location</Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* Emergency Description */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Emergency Description *</Text>
-          <View style={styles.inputContainer}>
-            <MaterialIcons name="description" size={20} color="#888" />
+          <View style={styles.formGroup}>
+            <Text style={[styles.inputLabel, { color: theme.text }]}>
+              {isArabic ? 'وصف مفصل للمشكلة *' : 'Detailed Problem Description *'}
+            </Text>
             <TextInput
-              style={[styles.textInput, styles.descriptionInput]}
-              placeholder="Describe the emergency situation in detail..."
-              placeholderTextColor="#666"
-              value={description}
-              onChangeText={setDescription}
+              style={[styles.textArea, { 
+                backgroundColor: theme.surface,
+                color: theme.text,
+                borderColor: theme.border 
+              }]}
+              value={formData.description}
+              onChangeText={(value) => handleInputChange('description', value)}
+              placeholder={isArabic 
+                ? 'اشرح المشكلة بالتفصيل، متى بدأت، وما هي الأعراض'
+                : 'Explain the problem in detail, when it started, and what symptoms you observe'
+              }
+              placeholderTextColor={theme.textSecondary}
               multiline
               numberOfLines={4}
             />
           </View>
-        </View>
 
-        {/* Contact Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Emergency Contact</Text>
-          <View style={styles.inputContainer}>
-            <MaterialIcons name="person" size={20} color="#888" />
+          <View style={styles.formGroup}>
+            <Text style={[styles.inputLabel, { color: theme.text }]}>
+              {isArabic ? 'موقع المشكلة *' : 'Problem Location *'}
+            </Text>
             <TextInput
-              style={styles.textInput}
-              placeholder="Contact person name *"
-              placeholderTextColor="#666"
-              value={contactPerson}
-              onChangeText={setContactPerson}
+              style={[styles.textInput, { 
+                backgroundColor: theme.surface,
+                color: theme.text,
+                borderColor: theme.border 
+              }]}
+              value={formData.location}
+              onChangeText={(value) => handleInputChange('location', value)}
+              placeholder={isArabic ? 'العنوان الكامل للموقع' : 'Full address of the location'}
+              placeholderTextColor={theme.textSecondary}
             />
           </View>
-          <View style={styles.inputContainer}>
-            <MaterialIcons name="phone" size={20} color="#888" />
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.inputLabel, { color: theme.text }]}>
+              {isArabic ? 'رقم الهاتف للاتصال' : 'Contact Phone Number'}
+            </Text>
             <TextInput
-              style={styles.textInput}
-              placeholder="+966 5XX XXX XXX *"
-              placeholderTextColor="#666"
-              value={contactPhone}
-              onChangeText={setContactPhone}
+              style={[styles.textInput, { 
+                backgroundColor: theme.surface,
+                color: theme.text,
+                borderColor: theme.border 
+              }]}
+              value={formData.contactPhone}
+              onChangeText={(value) => handleInputChange('contactPhone', value)}
+              placeholder={isArabic ? '+966 50 123 4567' : '+966 50 123 4567'}
+              placeholderTextColor={theme.textSecondary}
               keyboardType="phone-pad"
             />
           </View>
-        </View>
 
-        {/* Cost Estimation */}
-        <View style={styles.estimationCard}>
-          <View style={styles.estimationHeader}>
-            <MaterialIcons name="attach-money" size={24} color="#4CAF50" />
-            <Text style={styles.estimationTitle}>Cost Estimation</Text>
-          </View>
-          <View style={styles.estimationDetails}>
-            <View style={styles.estimationRow}>
-              <Text style={styles.estimationLabel}>Base Emergency Fee:</Text>
-              <Text style={styles.estimationValue}>500 SAR</Text>
-            </View>
-            <View style={styles.estimationRow}>
-              <Text style={styles.estimationLabel}>Service Multiplier:</Text>
-              <Text style={styles.estimationValue}>{emergencyServices.find(s => s.id === selectedService)?.multiplier || 1}x</Text>
-            </View>
-            <View style={styles.estimationRow}>
-              <Text style={styles.estimationLabel}>Urgency Multiplier:</Text>
-              <Text style={styles.estimationValue}>{urgencyLevel === 'emergency' ? '2x' : urgencyLevel === 'critical' ? '1.5x' : '1x'}</Text>
-            </View>
-            <View style={[styles.estimationRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>Estimated Total:</Text>
-              <Text style={styles.totalValue}>{getEstimatedCost()} SAR</Text>
-            </View>
+          <View style={styles.formGroup}>
+            <Text style={[styles.inputLabel, { color: theme.text }]}>
+              {isArabic ? 'ملاحظات إضافية' : 'Additional Notes'}
+            </Text>
+            <TextInput
+              style={[styles.textArea, { 
+                backgroundColor: theme.surface,
+                color: theme.text,
+                borderColor: theme.border 
+              }]}
+              value={formData.additionalNotes}
+              onChangeText={(value) => handleInputChange('additionalNotes', value)}
+              placeholder={isArabic 
+                ? 'أي معلومات إضافية قد تساعد المهندس'
+                : 'Any additional information that might help the engineer'
+              }
+              placeholderTextColor={theme.textSecondary}
+              multiline
+              numberOfLines={3}
+            />
           </View>
         </View>
 
-        {/* Submit Button */}
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            { backgroundColor: urgencyLevel === 'emergency' ? '#D32F2F' : '#F44336' },
-            (!selectedService || !location || !description || !contactPerson || !contactPhone) && styles.disabledButton
-          ]}
-          onPress={handleSubmit}
-          disabled={isSubmitting || !selectedService || !location || !description || !contactPerson || !contactPhone}
-        >
-          {isSubmitting ? (
-            <Text style={styles.submitButtonText}>Submitting Emergency Request...</Text>
-          ) : (
-            <>
-              <MaterialIcons name="emergency" size={24} color="#fff" />
-              <Text style={styles.submitButtonText}>SUBMIT EMERGENCY REQUEST</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        {/* Emergency Pricing & Response Time */}
+        {selectedService && (
+          <View style={[styles.section, { backgroundColor: theme.card }]}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              {isArabic ? 'معلومات الطوارئ' : 'Emergency Information'}
+            </Text>
+            
+            <View style={styles.emergencyInfoGrid}>
+              <View style={styles.emergencyInfoItem}>
+                <Ionicons name="time" size={24} color={urgencyConfig.color} />
+                <View style={styles.emergencyInfoContent}>
+                  <Text style={[styles.emergencyInfoLabel, { color: theme.text }]}>
+                    {isArabic ? 'وقت الاستجابة المتوقع' : 'Expected Response Time'}
+                  </Text>
+                  <Text style={[styles.emergencyInfoValue, { color: urgencyConfig.color }]}>
+                    {calculateResponseTime()} {isArabic ? 'دقيقة' : 'minutes'}
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={styles.emergencyInfoItem}>
+                <Ionicons name="cash" size={24} color={urgencyConfig.color} />
+                <View style={styles.emergencyInfoContent}>
+                  <Text style={[styles.emergencyInfoLabel, { color: theme.text }]}>
+                    {isArabic ? 'التكلفة الطارئة' : 'Emergency Cost'}
+                  </Text>
+                  <Text style={[styles.emergencyInfoValue, { color: urgencyConfig.color }]}>
+                    SAR {calculateEmergencyPrice().toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+            </View>
 
-        {/* Disclaimer */}
-        <View style={styles.disclaimer}>
-          <Text style={styles.disclaimerText}>
-            ⚠️ By submitting this emergency request, you confirm that this is a genuine emergency requiring immediate professional assistance.
-            False emergency requests may result in account suspension.
-          </Text>
-        </View>
+            <View style={styles.emergencyWarning}>
+              <Ionicons name="information-circle" size={20} color={COLORS.warning} />
+              <Text style={[styles.emergencyWarningText, { color: theme.text }]}>
+                {isArabic 
+                  ? 'الرسوم الطارئة تشمل استجابة سريعة وخدمة على مدار الساعة. قد تختلف التكلفة النهائية حسب تعقيد المشكلة.'
+                  : 'Emergency fees include rapid response and 24/7 service. Final cost may vary based on problem complexity.'
+                }
+              </Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Emergency Action Buttons */}
+      <View style={[styles.actionContainer, { backgroundColor: theme.surface }]}>
+        <CustomButton
+          title={isArabic ? 'إلغاء' : 'Cancel'}
+          onPress={() => navigation.goBack()}
+          variant="outline"
+          style={styles.cancelButton}
+        />
+        <CustomButton
+          title={isArabic ? 'إرسال الطلب الطارئ' : 'Submit Emergency Request'}
+          onPress={handleSubmitEmergencyRequest}
+          style={[styles.emergencyButton, { backgroundColor: urgencyConfig.color }]}
+          disabled={!selectedService}
+        />
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0f23',
   },
-  header: {
-    paddingTop: 10,
+  emergencyHeader: {
+    paddingTop: 50,
     paddingBottom: 20,
     paddingHorizontal: 20,
   },
-  headerContent: {
+  emergencyHeaderContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  emergencyIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 16,
   },
-  headerTitle: {
-    alignItems: 'center',
+  emergencyHeaderInfo: {
+    flex: 1,
   },
-  headerTitleText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
+  emergencyTitle: {
+    fontSize: TYPOGRAPHY.sizes.h5,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.white,
+    marginBottom: 4,
   },
-  headerSubtitle: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  helpButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  emergencySubtitle: {
+    fontSize: TYPOGRAPHY.sizes.body1,
+    color: COLORS.white,
+    opacity: 0.9,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-  },
-  warningBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FF9800',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#fff',
-    marginLeft: 10,
-    fontWeight: '500',
+    padding: 20,
   },
   section: {
-    marginBottom: 20,
+    borderRadius: BORDER_RADIUS.md,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 12,
-  },
-  urgencyGrid: {
-    gap: 10,
-  },
-  urgencyCard: {
-    backgroundColor: '#1e1e3f',
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  urgencyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  urgencyLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  emergencyBadge: {
-    backgroundColor: '#D32F2F',
-    borderRadius: 12,
-    padding: 4,
-  },
-  urgencyDescription: {
-    fontSize: 12,
-    color: '#aaa',
-  },
-  serviceCard: {
-    backgroundColor: '#1e1e3f',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  selectedServiceCard: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#1e2a1e',
-  },
-  serviceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    fontSize: TYPOGRAPHY.sizes.h6,
+    fontWeight: TYPOGRAPHY.weights.bold,
     marginBottom: 8,
   },
-  serviceIcon: {
-    fontSize: 24,
+  sectionDescription: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  urgencyOptions: {
+    gap: 12,
+  },
+  urgencyOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+  },
+  urgencyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
-  serviceInfo: {
+  urgencyInfo: {
     flex: 1,
   },
+  urgencyLabel: {
+    fontSize: TYPOGRAPHY.sizes.body1,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    marginBottom: 4,
+  },
+  urgencyDescription: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+  },
+  serviceGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  serviceCard: {
+    width: (width - 64) / 2,
+    padding: 16,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  serviceIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
   serviceTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  serviceResponse: {
-    fontSize: 12,
-    color: '#4CAF50',
-    fontWeight: '500',
-  },
-  multiplierBadge: {
-    backgroundColor: '#FF9800',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  multiplierText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: TYPOGRAPHY.sizes.body1,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    textAlign: 'center',
+    marginBottom: 8,
   },
   serviceDescription: {
-    fontSize: 14,
-    color: '#aaa',
-    lineHeight: 18,
+    fontSize: TYPOGRAPHY.sizes.caption,
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 16,
   },
-  inputContainer: {
+  serviceDetails: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#2a2a4a',
-    borderRadius: 8,
-    padding: 12,
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  serviceDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  serviceDetailText: {
+    fontSize: TYPOGRAPHY.sizes.caption,
+    marginLeft: 4,
+  },
+  selectedIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+    fontWeight: TYPOGRAPHY.weights.medium,
     marginBottom: 8,
   },
   textInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#fff',
-    marginLeft: 10,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: TYPOGRAPHY.sizes.body1,
   },
-  descriptionInput: {
-    minHeight: 80,
+  textArea: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: TYPOGRAPHY.sizes.body1,
     textAlignVertical: 'top',
   },
-  useCurrentLocation: {
+  emergencyInfoGrid: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 16,
+  },
+  emergencyInfoItem: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-  },
-  useCurrentLocationText: {
-    fontSize: 14,
-    color: '#4CAF50',
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  estimationCard: {
-    backgroundColor: '#1e1e3f',
-    borderRadius: 12,
     padding: 16,
-    marginBottom: 20,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
   },
-  estimationHeader: {
+  emergencyInfoContent: {
+    marginLeft: 12,
+  },
+  emergencyInfoLabel: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    marginBottom: 4,
+  },
+  emergencyInfoValue: {
+    fontSize: TYPOGRAPHY.sizes.h6,
+    fontWeight: TYPOGRAPHY.weights.bold,
+  },
+  emergencyWarning: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  estimationTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    marginLeft: 8,
-  },
-  estimationDetails: {
-    gap: 8,
-  },
-  estimationRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  estimationLabel: {
-    fontSize: 14,
-    color: '#aaa',
-  },
-  estimationValue: {
-    fontSize: 14,
-    color: '#fff',
-    fontWeight: '500',
-  },
-  totalRow: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#333',
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  totalValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4CAF50',
-  },
-  submitButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F44336',
-    borderRadius: 8,
-    paddingVertical: 16,
-    marginBottom: 20,
-  },
-  disabledButton: {
-    backgroundColor: '#333',
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    marginLeft: 8,
-  },
-  disclaimer: {
-    backgroundColor: '#2a2a4a',
-    borderRadius: 8,
+    alignItems: 'flex-start',
     padding: 12,
-    marginBottom: 30,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.warning + '20',
   },
-  disclaimerText: {
-    fontSize: 12,
-    color: '#aaa',
-    lineHeight: 16,
-    textAlign: 'center',
+  emergencyWarningText: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 18,
+  },
+  actionContainer: {
+    flexDirection: 'row',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  cancelButton: {
+    flex: 1,
+    marginRight: 8,
+  },
+  emergencyButton: {
+    flex: 2,
+    marginLeft: 8,
   },
 });
 

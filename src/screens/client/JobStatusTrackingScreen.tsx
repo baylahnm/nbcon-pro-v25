@@ -2,397 +2,686 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
-  SafeAreaView,
+  ScrollView,
   TouchableOpacity,
+  Dimensions,
   RefreshControl,
-  Animated,
+  Alert,
 } from 'react-native';
-import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
 
-interface JobStatus {
+import { RootState } from '../../store';
+import { Language, JobStatus, MilestoneStatus } from '../../types';
+import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
+import CustomButton from '../../components/forms/CustomButton';
+
+const { width } = Dimensions.get('window');
+
+interface Milestone {
   id: string;
-  title: string;
-  engineer: {
-    name: string;
-    avatar: string;
-    phone: string;
-  };
-  status: 'pending' | 'accepted' | 'in_progress' | 'review' | 'completed' | 'cancelled';
-  progress: number;
-  timeline: {
-    step: string;
-    status: 'completed' | 'active' | 'pending';
-    time?: string;
-    description: string;
-  }[];
-  location: string;
-  estimatedCompletion: string;
-  lastUpdate: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  budget: number;
-  category: string;
+  title: { en: string; ar: string };
+  description: { en: string; ar: string };
+  percentage: number;
+  amount: number;
+  status: MilestoneStatus;
+  dueDate: string;
+  completedAt?: string;
+  deliverables: string[];
 }
 
-const JobStatusTrackingScreen = () => {
-  const [jobs, setJobs] = useState<JobStatus[]>([
+interface ProjectUpdate {
+  id: string;
+  type: 'milestone' | 'message' | 'document' | 'payment';
+  title: { en: string; ar: string };
+  description: { en: string; ar: string };
+  timestamp: string;
+  author: string;
+  isRead: boolean;
+}
+
+interface JobStatusTrackingScreenProps {
+  route?: {
+    params: {
+      jobId: string;
+    };
+  };
+}
+
+const JobStatusTrackingScreen: React.FC<JobStatusTrackingScreenProps> = ({ route }) => {
+  const navigation = useNavigation();
+  const { language, isDarkMode } = useSelector((state: RootState) => state.app);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<'overview' | 'milestones' | 'updates' | 'documents'>('overview');
+
+  const isArabic = language === Language.ARABIC;
+  const theme = isDarkMode ? COLORS.dark : COLORS.light;
+
+  // Mock data - replace with actual API calls
+  const jobData = {
+    id: route?.params?.jobId || '1',
+    title: { en: 'Office Building MEP Design', ar: 'تصميم الأنظمة الكهروميكانيكية لمبنى مكتبي' },
+    client: { en: 'Al-Rajhi Construction', ar: 'شركة الراجحي للإنشاءات' },
+    engineer: { en: 'Ahmed Al-Sheikh', ar: 'أحمد الشيخ' },
+    status: JobStatus.IN_PROGRESS,
+    progress: 65,
+    budget: 45000,
+    spent: 29250,
+    startDate: '2024-01-15',
+    expectedEndDate: '2024-03-15',
+    actualEndDate: null,
+    location: { en: 'Riyadh, Saudi Arabia', ar: 'الرياض، المملكة العربية السعودية' },
+  };
+
+  const milestones: Milestone[] = [
     {
       id: '1',
-      title: 'Building Survey - NEOM Project',
-      engineer: {
-        name: 'Ahmed Al-Rashid',
-        avatar: '👨‍🔧',
-        phone: '+966501234567'
-      },
-      status: 'in_progress',
-      progress: 65,
-      timeline: [
-        { step: 'Job Posted', status: 'completed', time: '10:00 AM', description: 'Project requirements submitted' },
-        { step: 'Engineer Matched', status: 'completed', time: '10:15 AM', description: 'Ahmed Al-Rashid accepted the job' },
-        { step: 'On-Site Arrival', status: 'completed', time: '2:30 PM', description: 'Engineer checked in at location' },
-        { step: 'Survey in Progress', status: 'active', description: 'Currently conducting site measurements' },
-        { step: 'Report Submission', status: 'pending', description: 'Detailed report will be submitted' },
-        { step: 'Client Review', status: 'pending', description: 'Final review and approval' },
-      ],
-      location: 'NEOM, Tabuk Province',
-      estimatedCompletion: '6:00 PM Today',
-      lastUpdate: '5 minutes ago',
-      priority: 'high',
-      budget: 2500,
-      category: 'Surveying'
+      title: { en: 'Site Survey & Analysis', ar: 'مسح الموقع والتحليل' },
+      description: { en: 'Complete site survey and initial analysis', ar: 'إكمال مسح الموقع والتحليل الأولي' },
+      percentage: 20,
+      amount: 9000,
+      status: MilestoneStatus.COMPLETED,
+      dueDate: '2024-01-25',
+      completedAt: '2024-01-23',
+      deliverables: ['Site photos', 'Measurements', 'Analysis report'],
     },
     {
       id: '2',
-      title: 'MEP System Inspection',
-      engineer: {
-        name: 'Sara Al-Zahra',
-        avatar: '👩‍🔧',
-        phone: '+966502345678'
-      },
-      status: 'review',
-      progress: 90,
-      timeline: [
-        { step: 'Job Posted', status: 'completed', time: 'Yesterday 2:00 PM', description: 'MEP inspection requested' },
-        { step: 'Engineer Matched', status: 'completed', time: 'Yesterday 2:20 PM', description: 'Sara Al-Zahra assigned' },
-        { step: 'Inspection Complete', status: 'completed', time: 'Today 11:30 AM', description: 'Full MEP system inspected' },
-        { step: 'Report Submitted', status: 'completed', time: 'Today 1:15 PM', description: 'Detailed inspection report uploaded' },
-        { step: 'Client Review', status: 'active', description: 'Awaiting your approval' },
-        { step: 'Payment Release', status: 'pending', description: 'Final payment processing' },
-      ],
-      location: 'Riyadh Business District',
-      estimatedCompletion: 'Completed',
-      lastUpdate: '2 hours ago',
-      priority: 'medium',
-      budget: 1800,
-      category: 'MEP'
-    }
-  ]);
+      title: { en: 'Conceptual Design', ar: 'التصميم المفاهيمي' },
+      description: { en: 'Develop initial design concepts', ar: 'تطوير المفاهيم التصميمية الأولية' },
+      percentage: 30,
+      amount: 13500,
+      status: MilestoneStatus.COMPLETED,
+      dueDate: '2024-02-10',
+      completedAt: '2024-02-08',
+      deliverables: ['Design sketches', '3D models', 'Concept presentation'],
+    },
+    {
+      id: '3',
+      title: { en: 'Detailed Engineering', ar: 'الهندسة التفصيلية' },
+      description: { en: 'Complete detailed engineering drawings', ar: 'إكمال الرسومات الهندسية التفصيلية' },
+      percentage: 40,
+      amount: 18000,
+      status: MilestoneStatus.IN_PROGRESS,
+      dueDate: '2024-02-28',
+      deliverables: ['MEP drawings', 'Specifications', 'Bill of quantities'],
+    },
+    {
+      id: '4',
+      title: { en: 'Final Review & Approval', ar: 'المراجعة النهائية والموافقة' },
+      description: { en: 'Final review and client approval', ar: 'المراجعة النهائية وموافقة العميل' },
+      percentage: 10,
+      amount: 4500,
+      status: MilestoneStatus.PENDING,
+      dueDate: '2024-03-15',
+      deliverables: ['Final drawings', 'As-built documentation', 'Handover package'],
+    },
+  ];
 
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedJobId, setSelectedJobId] = useState<string>('1');
+  const projectUpdates: ProjectUpdate[] = [
+    {
+      id: '1',
+      type: 'milestone',
+      title: { en: 'Milestone 2 Completed', ar: 'تم إكمال المرحلة الثانية' },
+      description: { en: 'Conceptual design phase completed ahead of schedule', ar: 'تم إكمال مرحلة التصميم المفاهيمي قبل الموعد المحدد' },
+      timestamp: '2024-02-08T14:30:00Z',
+      author: 'Ahmed Al-Sheikh',
+      isRead: true,
+    },
+    {
+      id: '2',
+      type: 'document',
+      title: { en: 'New Documents Uploaded', ar: 'تم رفع مستندات جديدة' },
+      description: { en: 'Updated MEP drawings and specifications uploaded', ar: 'تم رفع الرسومات والمواصفات المحدثة للأنظمة الكهروميكانيكية' },
+      timestamp: '2024-02-10T09:15:00Z',
+      author: 'Ahmed Al-Sheikh',
+      isRead: false,
+    },
+    {
+      id: '3',
+      type: 'message',
+      title: { en: 'Site Visit Scheduled', ar: 'تم جدولة زيارة الموقع' },
+      description: { en: 'Site visit scheduled for next week to verify measurements', ar: 'تم جدولة زيارة الموقع الأسبوع القادم للتحقق من القياسات' },
+      timestamp: '2024-02-12T16:45:00Z',
+      author: 'Al-Rajhi Construction',
+      isRead: true,
+    },
+  ];
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = async () => {
     setRefreshing(true);
     // Simulate API call
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  }, []);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setRefreshing(false);
+  };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: JobStatus) => {
     switch (status) {
-      case 'pending': return '#FFA500';
-      case 'accepted': return '#4CAF50';
-      case 'in_progress': return '#2196F3';
-      case 'review': return '#FF9800';
-      case 'completed': return '#8BC34A';
-      case 'cancelled': return '#F44336';
-      default: return '#757575';
+      case JobStatus.DRAFT:
+        return COLORS.warning;
+      case JobStatus.POSTED:
+        return COLORS.info;
+      case JobStatus.MATCHED:
+        return COLORS.primary;
+      case JobStatus.IN_PROGRESS:
+        return COLORS.accent;
+      case JobStatus.COMPLETED:
+        return COLORS.success;
+      case JobStatus.CANCELLED:
+        return COLORS.error;
+      default:
+        return COLORS.textSecondary;
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return '#F44336';
-      case 'high': return '#FF9800';
-      case 'medium': return '#FFC107';
-      case 'low': return '#4CAF50';
-      default: return '#757575';
+  const getMilestoneStatusColor = (status: MilestoneStatus) => {
+    switch (status) {
+      case MilestoneStatus.COMPLETED:
+        return COLORS.success;
+      case MilestoneStatus.IN_PROGRESS:
+        return COLORS.accent;
+      case MilestoneStatus.PENDING:
+        return COLORS.textSecondary;
+      case MilestoneStatus.APPROVED:
+        return COLORS.primary;
+      case MilestoneStatus.REJECTED:
+        return COLORS.error;
+      default:
+        return COLORS.textSecondary;
     }
   };
 
-  const selectedJob = jobs.find(job => job.id === selectedJobId);
+  const getText = (textObj: { en: string; ar: string }) => {
+    return isArabic ? textObj.ar : textObj.en;
+  };
 
-  const renderJobCard = (job: JobStatus) => (
-    <TouchableOpacity
-      key={job.id}
-      style={[
-        styles.jobCard,
-        selectedJobId === job.id && styles.selectedJobCard
-      ]}
-      onPress={() => setSelectedJobId(job.id)}
-    >
-      <View style={styles.jobCardHeader}>
-        <View style={styles.jobTitleRow}>
-          <Text style={styles.jobTitle} numberOfLines={1}>{job.title}</Text>
-          <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(job.priority) }]}>
-            <Text style={styles.priorityText}>{job.priority.toUpperCase()}</Text>
+  const formatCurrency = (amount: number) => {
+    return `SAR ${amount.toLocaleString()}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US');
+  };
+
+  const renderOverview = () => (
+    <View style={styles.tabContent}>
+      {/* Progress Overview */}
+      <View style={[styles.card, { backgroundColor: theme.card }]}>
+        <Text style={[styles.cardTitle, { color: theme.text }]}>
+          {isArabic ? 'نظرة عامة على التقدم' : 'Progress Overview'}
+        </Text>
+        
+        <View style={styles.progressContainer}>
+          <View style={styles.progressHeader}>
+            <Text style={[styles.progressLabel, { color: theme.text }]}>
+              {isArabic ? 'التقدم الإجمالي' : 'Overall Progress'}
+            </Text>
+            <Text style={[styles.progressPercentage, { color: COLORS.primary }]}>
+              {jobData.progress}%
+            </Text>
+          </View>
+          
+          <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
+            <View 
+              style={[
+                styles.progressFill, 
+                { 
+                  width: `${jobData.progress}%`,
+                  backgroundColor: COLORS.primary 
+                }
+              ]} 
+            />
           </View>
         </View>
-        <Text style={styles.jobCategory}>{job.category}</Text>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: COLORS.primary }]}>
+              {formatCurrency(jobData.budget)}
+            </Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+              {isArabic ? 'الميزانية الإجمالية' : 'Total Budget'}
+            </Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: COLORS.accent }]}>
+              {formatCurrency(jobData.spent)}
+            </Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+              {isArabic ? 'المصروف حتى الآن' : 'Spent So Far'}
+            </Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: COLORS.success }]}>
+              {formatCurrency(jobData.budget - jobData.spent)}
+            </Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+              {isArabic ? 'المتبقي' : 'Remaining'}
+            </Text>
+          </View>
+        </View>
       </View>
 
-      <View style={styles.progressSection}>
-        <View style={styles.progressHeader}>
-          <Text style={styles.progressLabel}>Progress</Text>
-          <Text style={styles.progressPercent}>{job.progress}%</Text>
+      {/* Project Timeline */}
+      <View style={[styles.card, { backgroundColor: theme.card }]}>
+        <Text style={[styles.cardTitle, { color: theme.text }]}>
+          {isArabic ? 'الجدول الزمني للمشروع' : 'Project Timeline'}
+        </Text>
+        
+        <View style={styles.timelineItem}>
+          <View style={[styles.timelineDot, { backgroundColor: COLORS.success }]} />
+          <View style={styles.timelineContent}>
+            <Text style={[styles.timelineTitle, { color: theme.text }]}>
+              {isArabic ? 'بداية المشروع' : 'Project Start'}
+            </Text>
+            <Text style={[styles.timelineDate, { color: theme.textSecondary }]}>
+              {formatDate(jobData.startDate)}
+            </Text>
+          </View>
         </View>
-        <View style={styles.progressBarContainer}>
-          <View style={[styles.progressBar, { width: `${job.progress}%` }]} />
-        </View>
-      </View>
 
-      <View style={styles.statusRow}>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(job.status) }]}>
-          <Text style={styles.statusText}>{job.status.replace('_', ' ').toUpperCase()}</Text>
+        <View style={styles.timelineItem}>
+          <View style={[styles.timelineDot, { backgroundColor: COLORS.accent }]} />
+          <View style={styles.timelineContent}>
+            <Text style={[styles.timelineTitle, { color: theme.text }]}>
+              {isArabic ? 'في التقدم' : 'In Progress'}
+            </Text>
+            <Text style={[styles.timelineDate, { color: theme.textSecondary }]}>
+              {isArabic ? '65% مكتمل' : '65% Complete'}
+            </Text>
+          </View>
         </View>
-        <Text style={styles.lastUpdate}>{job.lastUpdate}</Text>
+
+        <View style={styles.timelineItem}>
+          <View style={[styles.timelineDot, { backgroundColor: theme.border }]} />
+          <View style={styles.timelineContent}>
+            <Text style={[styles.timelineTitle, { color: theme.text }]}>
+              {isArabic ? 'التسليم المتوقع' : 'Expected Delivery'}
+            </Text>
+            <Text style={[styles.timelineDate, { color: theme.textSecondary }]}>
+              {formatDate(jobData.expectedEndDate)}
+            </Text>
+          </View>
+        </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
-  const renderTimelineStep = (step: any, index: number) => {
-    const isCompleted = step.status === 'completed';
-    const isActive = step.status === 'active';
+  const renderMilestones = () => (
+    <View style={styles.tabContent}>
+      {milestones.map((milestone, index) => (
+        <View key={milestone.id} style={[styles.milestoneCard, { backgroundColor: theme.card }]}>
+          <View style={styles.milestoneHeader}>
+            <View style={styles.milestoneInfo}>
+              <Text style={[styles.milestoneTitle, { color: theme.text }]}>
+                {getText(milestone.title)}
+              </Text>
+              <Text style={[styles.milestoneDescription, { color: theme.textSecondary }]}>
+                {getText(milestone.description)}
+              </Text>
+            </View>
+            <View style={[styles.milestoneStatus, { backgroundColor: getMilestoneStatusColor(milestone.status) }]}>
+              <Text style={styles.milestoneStatusText}>
+                {isArabic ? 
+                  (milestone.status === MilestoneStatus.COMPLETED ? 'مكتمل' :
+                   milestone.status === MilestoneStatus.IN_PROGRESS ? 'قيد التنفيذ' : 'معلق') :
+                  (milestone.status === MilestoneStatus.COMPLETED ? 'Completed' :
+                   milestone.status === MilestoneStatus.IN_PROGRESS ? 'In Progress' : 'Pending')
+                }
+              </Text>
+            </View>
+          </View>
 
-    return (
-      <View key={index} style={styles.timelineStep}>
-        <View style={styles.timelineLeft}>
-          <View style={[
-            styles.timelineIcon,
-            isCompleted && styles.timelineIconCompleted,
-            isActive && styles.timelineIconActive
-          ]}>
-            {isCompleted ? (
-              <MaterialIcons name="check" size={16} color="#fff" />
-            ) : isActive ? (
-              <MaterialIcons name="radio-button-checked" size={16} color="#fff" />
-            ) : (
-              <MaterialIcons name="radio-button-unchecked" size={16} color="#757575" />
+          <View style={styles.milestoneProgress}>
+            <View style={styles.milestoneProgressHeader}>
+              <Text style={[styles.milestoneProgressLabel, { color: theme.text }]}>
+                {isArabic ? 'التقدم' : 'Progress'}
+              </Text>
+              <Text style={[styles.milestoneProgressValue, { color: COLORS.primary }]}>
+                {milestone.percentage}%
+              </Text>
+            </View>
+            <View style={[styles.milestoneProgressBar, { backgroundColor: theme.border }]}>
+              <View 
+                style={[
+                  styles.milestoneProgressFill, 
+                  { 
+                    width: `${milestone.percentage}%`,
+                    backgroundColor: getMilestoneStatusColor(milestone.status)
+                  }
+                ]} 
+              />
+            </View>
+          </View>
+
+          <View style={styles.milestoneDetails}>
+            <View style={styles.milestoneDetailItem}>
+              <Ionicons name="cash-outline" size={16} color={theme.textSecondary} />
+              <Text style={[styles.milestoneDetailText, { color: theme.textSecondary }]}>
+                {formatCurrency(milestone.amount)}
+              </Text>
+            </View>
+            <View style={styles.milestoneDetailItem}>
+              <Ionicons name="calendar-outline" size={16} color={theme.textSecondary} />
+              <Text style={[styles.milestoneDetailText, { color: theme.textSecondary }]}>
+                {isArabic ? 'الموعد النهائي' : 'Due'}: {formatDate(milestone.dueDate)}
+              </Text>
+            </View>
+            {milestone.completedAt && (
+              <View style={styles.milestoneDetailItem}>
+                <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.success} />
+                <Text style={[styles.milestoneDetailText, { color: COLORS.success }]}>
+                  {isArabic ? 'مكتمل في' : 'Completed on'}: {formatDate(milestone.completedAt)}
+                </Text>
+              </View>
             )}
           </View>
-          {index < selectedJob!.timeline.length - 1 && (
-            <View style={[
-              styles.timelineLine,
-              isCompleted && styles.timelineLineCompleted
-            ]} />
+
+          {milestone.deliverables.length > 0 && (
+            <View style={styles.deliverablesContainer}>
+              <Text style={[styles.deliverablesTitle, { color: theme.text }]}>
+                {isArabic ? 'المخرجات' : 'Deliverables'}:
+              </Text>
+              {milestone.deliverables.map((deliverable, idx) => (
+                <View key={idx} style={styles.deliverableItem}>
+                  <Ionicons name="document-text-outline" size={14} color={theme.textSecondary} />
+                  <Text style={[styles.deliverableText, { color: theme.textSecondary }]}>
+                    {deliverable}
+                  </Text>
+                </View>
+              ))}
+            </View>
           )}
         </View>
-        
-        <View style={styles.timelineContent}>
-          <View style={styles.timelineHeader}>
-            <Text style={[
-              styles.timelineStepTitle,
-              isActive && styles.activeStepTitle
-            ]}>
-              {step.step}
-            </Text>
-            {step.time && (
-              <Text style={styles.timelineTime}>{step.time}</Text>
+      ))}
+    </View>
+  );
+
+  const renderUpdates = () => (
+    <View style={styles.tabContent}>
+      {projectUpdates.map((update) => (
+        <View key={update.id} style={[styles.updateCard, { backgroundColor: theme.card }]}>
+          <View style={styles.updateHeader}>
+            <View style={styles.updateIconContainer}>
+              <Ionicons 
+                name={
+                  update.type === 'milestone' ? 'flag-outline' :
+                  update.type === 'document' ? 'document-text-outline' :
+                  update.type === 'message' ? 'chatbubble-outline' : 'card-outline'
+                } 
+                size={20} 
+                color={COLORS.primary} 
+              />
+            </View>
+            <View style={styles.updateContent}>
+              <Text style={[styles.updateTitle, { color: theme.text }]}>
+                {getText(update.title)}
+              </Text>
+              <Text style={[styles.updateDescription, { color: theme.textSecondary }]}>
+                {getText(update.description)}
+              </Text>
+              <View style={styles.updateMeta}>
+                <Text style={[styles.updateAuthor, { color: theme.textSecondary }]}>
+                  {update.author}
+                </Text>
+                <Text style={[styles.updateTime, { color: theme.textSecondary }]}>
+                  {formatDate(update.timestamp)}
+                </Text>
+              </View>
+            </View>
+            {!update.isRead && (
+              <View style={styles.unreadIndicator} />
             )}
           </View>
-          <Text style={styles.timelineDescription}>{step.description}</Text>
         </View>
+      ))}
+    </View>
+  );
+
+  const renderDocuments = () => (
+    <View style={styles.tabContent}>
+      <View style={[styles.card, { backgroundColor: theme.card }]}>
+        <Text style={[styles.cardTitle, { color: theme.text }]}>
+          {isArabic ? 'مستندات المشروع' : 'Project Documents'}
+        </Text>
+        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+          {isArabic ? 'سيتم إضافة المستندات قريباً' : 'Documents will be added soon'}
+        </Text>
       </View>
-    );
+    </View>
+  );
+
+  const renderTabContent = () => {
+    switch (selectedTab) {
+      case 'overview':
+        return renderOverview();
+      case 'milestones':
+        return renderMilestones();
+      case 'updates':
+        return renderUpdates();
+      case 'documents':
+        return renderDocuments();
+      default:
+        return renderOverview();
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Header */}
       <LinearGradient
-        colors={['#1a1a2e', '#16213e']}
+        colors={[COLORS.primary, COLORS.primaryDark]}
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <TouchableOpacity style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={COLORS.white} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Job Tracking</Text>
-          <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
-            <MaterialIcons name="refresh" size={24} color="#fff" />
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle}>
+              {getText(jobData.title)}
+            </Text>
+            <Text style={styles.headerSubtitle}>
+              {getText(jobData.client)} • {getText(jobData.location)}
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.moreButton}>
+            <Ionicons name="ellipsis-vertical" size={24} color={COLORS.white} />
           </TouchableOpacity>
         </View>
       </LinearGradient>
 
+      {/* Status Bar */}
+      <View style={[styles.statusBar, { backgroundColor: theme.surface }]}>
+        <View style={styles.statusItem}>
+          <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(jobData.status) }]} />
+          <Text style={[styles.statusText, { color: theme.text }]}>
+            {isArabic ? 
+              (jobData.status === JobStatus.IN_PROGRESS ? 'قيد التنفيذ' : 'In Progress') :
+              (jobData.status === JobStatus.IN_PROGRESS ? 'In Progress' : 'In Progress')
+            }
+          </Text>
+        </View>
+        <View style={styles.statusItem}>
+          <Ionicons name="person-outline" size={16} color={theme.textSecondary} />
+          <Text style={[styles.statusText, { color: theme.textSecondary }]}>
+            {jobData.engineer.en}
+          </Text>
+        </View>
+      </View>
+
+      {/* Tabs */}
+      <View style={[styles.tabContainer, { backgroundColor: theme.surface }]}>
+        {[
+          { key: 'overview', label: { en: 'Overview', ar: 'نظرة عامة' }, icon: 'grid-outline' },
+          { key: 'milestones', label: { en: 'Milestones', ar: 'المراحل' }, icon: 'flag-outline' },
+          { key: 'updates', label: { en: 'Updates', ar: 'التحديثات' }, icon: 'notifications-outline' },
+          { key: 'documents', label: { en: 'Documents', ar: 'المستندات' }, icon: 'document-text-outline' },
+        ].map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[
+              styles.tab,
+              selectedTab === tab.key && styles.activeTab,
+              selectedTab === tab.key && { backgroundColor: COLORS.primary }
+            ]}
+            onPress={() => setSelectedTab(tab.key as any)}
+          >
+            <Ionicons 
+              name={tab.icon as any} 
+              size={20} 
+              color={selectedTab === tab.key ? COLORS.white : theme.textSecondary} 
+            />
+            <Text style={[
+              styles.tabText,
+              { color: selectedTab === tab.key ? COLORS.white : theme.textSecondary }
+            ]}>
+              {getText(tab.label)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Content */}
       <ScrollView
         style={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
-        {/* Jobs List */}
-        <View style={styles.jobsList}>
-          <Text style={styles.sectionTitle}>Active Jobs ({jobs.length})</Text>
-          {jobs.map(renderJobCard)}
-        </View>
-
-        {/* Selected Job Details */}
-        {selectedJob && (
-          <View style={styles.jobDetails}>
-            <View style={styles.detailsHeader}>
-              <Text style={styles.detailsTitle}>{selectedJob.title}</Text>
-              <View style={styles.engineerInfo}>
-                <Text style={styles.engineerAvatar}>{selectedJob.engineer.avatar}</Text>
-                <View style={styles.engineerDetails}>
-                  <Text style={styles.engineerName}>{selectedJob.engineer.name}</Text>
-                  <Text style={styles.engineerPhone}>{selectedJob.engineer.phone}</Text>
-                </View>
-                <TouchableOpacity style={styles.callButton}>
-                  <MaterialIcons name="call" size={20} color="#4CAF50" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Job Info Cards */}
-            <View style={styles.infoCards}>
-              <View style={styles.infoCard}>
-                <MaterialIcons name="location-on" size={20} color="#2196F3" />
-                <Text style={styles.infoLabel}>Location</Text>
-                <Text style={styles.infoValue}>{selectedJob.location}</Text>
-              </View>
-              <View style={styles.infoCard}>
-                <MaterialIcons name="schedule" size={20} color="#FF9800" />
-                <Text style={styles.infoLabel}>Est. Completion</Text>
-                <Text style={styles.infoValue}>{selectedJob.estimatedCompletion}</Text>
-              </View>
-              <View style={styles.infoCard}>
-                <MaterialIcons name="attach-money" size={20} color="#4CAF50" />
-                <Text style={styles.infoLabel}>Budget</Text>
-                <Text style={styles.infoValue}>{selectedJob.budget} SAR</Text>
-              </View>
-            </View>
-
-            {/* Timeline */}
-            <View style={styles.timelineSection}>
-              <Text style={styles.timelineTitle}>Project Timeline</Text>
-              <View style={styles.timeline}>
-                {selectedJob.timeline.map(renderTimelineStep)}
-              </View>
-            </View>
-
-            {/* Action Buttons */}
-            <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.messageButton}>
-                <MaterialIcons name="message" size={20} color="#2196F3" />
-                <Text style={styles.buttonText}>Message</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.viewReportButton}>
-                <MaterialIcons name="description" size={20} color="#fff" />
-                <Text style={styles.viewReportButtonText}>View Report</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+        {renderTabContent()}
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Action Buttons */}
+      <View style={[styles.actionContainer, { backgroundColor: theme.surface }]}>
+        <CustomButton
+          title={isArabic ? 'إرسال رسالة' : 'Send Message'}
+          onPress={() => {}}
+          variant="outline"
+          style={styles.actionButton}
+        />
+        <CustomButton
+          title={isArabic ? 'طلب تحديث' : 'Request Update'}
+          onPress={() => {}}
+          style={styles.actionButton}
+        />
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0f23',
   },
   header: {
-    paddingTop: 10,
+    paddingTop: 50,
     paddingBottom: 20,
     paddingHorizontal: 20,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginRight: 15,
+  },
+  headerInfo: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: TYPOGRAPHY.sizes.h6,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.white,
+    marginBottom: 4,
   },
-  refreshButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  headerSubtitle: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+    color: COLORS.white,
+    opacity: 0.9,
+  },
+  moreButton: {
+    padding: 4,
+  },
+  statusBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  statusItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  statusText: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: BORDER_RADIUS.sm,
+    marginHorizontal: 2,
+  },
+  activeTab: {
+    backgroundColor: COLORS.primary,
+  },
+  tabText: {
+    fontSize: TYPOGRAPHY.sizes.caption,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    marginLeft: 4,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    padding: 20,
   },
-  jobsList: {
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 15,
-  },
-  jobCard: {
-    backgroundColor: '#1e1e3f',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  selectedJobCard: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#1e2a1e',
-  },
-  jobCardHeader: {
-    marginBottom: 12,
-  },
-  jobTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  jobTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+  tabContent: {
     flex: 1,
-    marginRight: 10,
   },
-  jobCategory: {
-    fontSize: 12,
-    color: '#888',
+  card: {
+    borderRadius: BORDER_RADIUS.md,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  priorityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+  cardTitle: {
+    fontSize: TYPOGRAPHY.sizes.h6,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    marginBottom: 16,
   },
-  priorityText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  progressSection: {
-    marginBottom: 12,
+  progressContainer: {
+    marginBottom: 20,
   },
   progressHeader: {
     flexDirection: 'row',
@@ -401,215 +690,228 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   progressLabel: {
-    fontSize: 14,
-    color: '#ccc',
+    fontSize: TYPOGRAPHY.sizes.body1,
+    fontWeight: TYPOGRAPHY.weights.medium,
   },
-  progressPercent: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4CAF50',
-  },
-  progressBarContainer: {
-    height: 4,
-    backgroundColor: '#333',
-    borderRadius: 2,
-    overflow: 'hidden',
+  progressPercentage: {
+    fontSize: TYPOGRAPHY.sizes.h6,
+    fontWeight: TYPOGRAPHY.weights.bold,
   },
   progressBar: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
     height: '100%',
-    backgroundColor: '#4CAF50',
+    borderRadius: 4,
   },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  lastUpdate: {
-    fontSize: 12,
-    color: '#888',
-  },
-  jobDetails: {
-    backgroundColor: '#1e1e3f',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-  },
-  detailsHeader: {
-    marginBottom: 20,
-  },
-  detailsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 15,
-  },
-  engineerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  engineerAvatar: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  engineerDetails: {
-    flex: 1,
-  },
-  engineerName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#fff',
-  },
-  engineerPhone: {
-    fontSize: 14,
-    color: '#888',
-  },
-  callButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoCards: {
+  statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
   },
-  infoCard: {
-    flex: 1,
-    backgroundColor: '#2a2a4a',
-    borderRadius: 8,
-    padding: 12,
-    marginHorizontal: 4,
+  statItem: {
     alignItems: 'center',
   },
-  infoLabel: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 4,
-    marginBottom: 2,
+  statValue: {
+    fontSize: TYPOGRAPHY.sizes.h6,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    marginBottom: 4,
   },
-  infoValue: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#fff',
+  statLabel: {
+    fontSize: TYPOGRAPHY.sizes.caption,
     textAlign: 'center',
   },
-  timelineSection: {
-    marginBottom: 20,
-  },
-  timelineTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 15,
-  },
-  timeline: {
-    paddingLeft: 10,
-  },
-  timelineStep: {
+  timelineItem: {
     flexDirection: 'row',
-    marginBottom: 20,
-  },
-  timelineLeft: {
     alignItems: 'center',
-    marginRight: 15,
+    marginBottom: 16,
   },
-  timelineIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#333',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timelineIconCompleted: {
-    backgroundColor: '#4CAF50',
-  },
-  timelineIconActive: {
-    backgroundColor: '#2196F3',
-  },
-  timelineLine: {
-    width: 2,
-    height: 30,
-    backgroundColor: '#333',
-    marginTop: 8,
-  },
-  timelineLineCompleted: {
-    backgroundColor: '#4CAF50',
+  timelineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 16,
   },
   timelineContent: {
     flex: 1,
-    paddingTop: 4,
   },
-  timelineHeader: {
+  timelineTitle: {
+    fontSize: TYPOGRAPHY.sizes.body1,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    marginBottom: 4,
+  },
+  timelineDate: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+  },
+  milestoneCard: {
+    borderRadius: BORDER_RADIUS.md,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  milestoneHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  milestoneInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  milestoneTitle: {
+    fontSize: TYPOGRAPHY.sizes.h6,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    marginBottom: 4,
+  },
+  milestoneDescription: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+    lineHeight: 20,
+  },
+  milestoneStatus: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  milestoneStatusText: {
+    fontSize: TYPOGRAPHY.sizes.caption,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    color: COLORS.white,
+  },
+  milestoneProgress: {
+    marginBottom: 16,
+  },
+  milestoneProgressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  milestoneProgressLabel: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  milestoneProgressValue: {
+    fontSize: TYPOGRAPHY.sizes.body1,
+    fontWeight: TYPOGRAPHY.weights.bold,
+  },
+  milestoneProgressBar: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  milestoneProgressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  milestoneDetails: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 16,
+  },
+  milestoneDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+    marginBottom: 8,
+  },
+  milestoneDetailText: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+    marginLeft: 6,
+  },
+  deliverablesContainer: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingTop: 16,
+  },
+  deliverablesTitle: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    marginBottom: 8,
+  },
+  deliverableItem: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
   },
-  timelineStepTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#fff',
+  deliverableText: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+    marginLeft: 8,
   },
-  activeStepTitle: {
-    color: '#2196F3',
+  updateCard: {
+    borderRadius: BORDER_RADIUS.md,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  timelineTime: {
-    fontSize: 12,
-    color: '#888',
+  updateHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
-  timelineDescription: {
-    fontSize: 13,
-    color: '#aaa',
-    lineHeight: 18,
+  updateIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
-  actionButtons: {
+  updateContent: {
+    flex: 1,
+  },
+  updateTitle: {
+    fontSize: TYPOGRAPHY.sizes.body1,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    marginBottom: 4,
+  },
+  updateDescription: {
+    fontSize: TYPOGRAPHY.sizes.body2,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  updateMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  messageButton: {
-    flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(33, 150, 243, 0.1)',
-    borderRadius: 8,
-    paddingVertical: 12,
-    marginRight: 10,
   },
-  viewReportButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4CAF50',
-    borderRadius: 8,
-    paddingVertical: 12,
+  updateAuthor: {
+    fontSize: TYPOGRAPHY.sizes.caption,
+    fontWeight: TYPOGRAPHY.weights.medium,
   },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#2196F3',
+  updateTime: {
+    fontSize: TYPOGRAPHY.sizes.caption,
+  },
+  unreadIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
     marginLeft: 8,
   },
-  viewReportButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#fff',
-    marginLeft: 8,
+  emptyText: {
+    fontSize: TYPOGRAPHY.sizes.body1,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  actionContainer: {
+    flexDirection: 'row',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  actionButton: {
+    flex: 1,
+    marginHorizontal: 4,
   },
 });
 

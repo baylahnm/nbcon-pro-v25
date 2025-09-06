@@ -20,7 +20,10 @@
       "Read(/D:\\nbcon-pro\\src\\screens\\auth/**)",
       "Bash(npm run lint)",
       "Bash(npm run:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Read(//c/Users/nass/OneDrive/Pictures/Screenshots/**)",
+      "Bash(npx expo:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

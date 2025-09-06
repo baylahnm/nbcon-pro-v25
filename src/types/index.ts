@@ -170,3 +170,32 @@ export enum Language {
   ENGLISH = 'en',
   ARABIC = 'ar',
 }
+
+// Service Categories
+export enum ServiceCategory {
+  CIVIL = 'civil',
+  MEP = 'mep',
+  SURVEYING = 'surveying',
+  BIM = 'bim',
+  HSE = 'hse',
+  GIS = 'gis',
+}
+
+// Job Priority
+export enum JobPriority {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+  URGENT = 'urgent',
+  CRITICAL = 'critical',
+}
+
+// Job Template
+export interface JobTemplate {
+  id: string;
+  title: { en: string; ar: string };
+  description: { en: string; ar: string };
+  category: ServiceCategory;
+  estimatedPrice: number;
+  estimatedDuration: number;
+}

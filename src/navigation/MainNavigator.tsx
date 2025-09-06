@@ -8,10 +8,11 @@ import { RootState } from '../store';
 import { UserRole } from '../types';
 import { COLORS } from '../constants';
 
-// Dashboard Screens
-import ClientDashboardScreen from '../screens/dashboard/ClientDashboardScreen';
-import EngineerDashboardScreen from '../screens/dashboard/EngineerDashboardScreen';
-import ServiceDiscoveryScreen from '../screens/dashboard/ServiceDiscoveryScreen';
+// Import existing screens
+import ClientDashboardScreen from '../screens/client/ClientDashboardScreen';
+import EngineerDashboardScreen from '../screens/engineer/EngineerDashboardScreen';
+import BrowseServicesScreen from '../screens/client/BrowseServicesScreen';
+import ServiceDiscoveryScreen from '../screens/services/ServiceDiscoveryScreen';
 
 // Jobs Screens
 import JobPostingScreen from '../screens/jobs/JobPostingScreen';
@@ -24,7 +25,6 @@ import PaymentMethodsScreen from '../screens/payments/PaymentMethodsScreen';
 import PaymentProcessingScreen from '../screens/payments/PaymentProcessingScreen';
 import PaymentHistoryScreen from '../screens/payments/PaymentHistoryScreen';
 import BillingDashboardScreen from '../screens/payments/BillingDashboardScreen';
-import SubscriptionPlansScreen from '../screens/payments/SubscriptionPlansScreen';
 import SubscriptionManagementScreen from '../screens/payments/SubscriptionManagementScreen';
 import InvoiceScreen from '../screens/payments/InvoiceScreen';
 
@@ -45,13 +45,15 @@ import ContactSupportScreen from '../screens/support/ContactSupportScreen';
 import FeedbackScreen from '../screens/support/FeedbackScreen';
 
 // Error & State Screens
-import ErrorScreen from '../screens/error/ErrorScreen';
-import NoInternetScreen from '../screens/error/NoInternetScreen';
-import ServerErrorScreen from '../screens/error/ServerErrorScreen';
-import NotFoundScreen from '../screens/error/NotFoundScreen';
-import MaintenanceScreen from '../screens/error/MaintenanceScreen';
+import Error404Screen from '../screens/states/Error404Screen';
+import Error500Screen from '../screens/states/Error500Screen';
+import OfflineModeScreen from '../screens/states/OfflineModeScreen';
+import MaintenanceModeScreen from '../screens/states/MaintenanceModeScreen';
 
 export type MainStackParamList = {
+  // Main Tabs
+  MainTabs: undefined;
+  
   // Dashboard
   Dashboard: undefined;
   ClientDashboard: undefined;
@@ -220,7 +222,6 @@ const MainNavigator: React.FC = () => {
       <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
       <Stack.Screen name="PaymentProcessing" component={PaymentProcessingScreen} />
       <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} />
-      <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansScreen} />
       <Stack.Screen name="SubscriptionManagement" component={SubscriptionManagementScreen} />
       <Stack.Screen name="Invoice" component={InvoiceScreen} />
       
@@ -239,11 +240,11 @@ const MainNavigator: React.FC = () => {
       <Stack.Screen name="Feedback" component={FeedbackScreen} />
       
       {/* Error & State Screens */}
-      <Stack.Screen name="Error" component={ErrorScreen} />
-      <Stack.Screen name="NoInternet" component={NoInternetScreen} />
-      <Stack.Screen name="ServerError" component={ServerErrorScreen} />
-      <Stack.Screen name="NotFound" component={NotFoundScreen} />
-      <Stack.Screen name="Maintenance" component={MaintenanceScreen} />
+      <Stack.Screen name="Error" component={Error500Screen} />
+      <Stack.Screen name="NoInternet" component={OfflineModeScreen} />
+      <Stack.Screen name="ServerError" component={Error500Screen} />
+      <Stack.Screen name="NotFound" component={Error404Screen} />
+      <Stack.Screen name="Maintenance" component={MaintenanceModeScreen} />
     </Stack.Navigator>
   );
 };

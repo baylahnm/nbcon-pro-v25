@@ -18,7 +18,9 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
 import CustomButton from '../../components/forms/CustomButton';
 
 interface Props {
-  jobId: string;
+  route?: { params?: { jobId?: string } };
+  navigation?: any;
+  jobId?: string;
   onApply?: (jobId: string) => void;
   onSave?: (jobId: string) => void;
   onContact?: (clientId: string) => void;
