@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   Dimensions,
   ScrollView,
+  Animated,
+  Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSelector } from 'react-redux';
@@ -16,6 +18,14 @@ import { RootState } from '../../store';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { UserRole, Language } from '../../types';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
+import { ANIMATIONS } from '../../constants/animations';
+import { 
+  createFadeIn, 
+  createSlideIn, 
+  createStaggeredAnimation, 
+  createCardSelectAnimation,
+  NBCONEasing 
+} from '../../utils/animations';
 
 type RoleSelectionNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'RoleSelection'>;
 
@@ -77,7 +87,128 @@ const RoleSelectionScreen: React.FC<Props> = ({ navigation }) => {
   const isArabic = language === Language.ARABIC;
   const theme = isDarkMode ? COLORS.dark : COLORS.light;
 
-  const handleRoleSelect = (role: UserRole) => {
+  // Animation refs
+  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const headerTranslateY = useRef(new Animated.Value(-30)).current;
+  const cardAnimations = useRef(
+    roleOptions.map(() => ({
+      opacity: new Animated.Value(0),
+      translateY: new Animated.Value(50),
+      scale: new Animated.Value(0.9),
+      elevation: new Animated.Value(2),
+    }))
+  ).current;
+  const buttonOpacity = useRef(new Animated.Value(0)).current;
+  const buttonScale = useRef(new Animated.Value(0.8)).current;
+
+  // Initialize animations on mount
+  useEffect(() => {
+    const headerAnimation = Animated.parallel([
+      createFadeIn(headerOpacity, ANIMATIONS.DURATION.slow),
+      Animated.timing(headerTranslateY, {
+        toValue: 0,
+        duration: ANIMATIONS.DURATION.slow,
+        easing: NBCONEasing.elegant,
+        useNativeDriver: true,
+      }),
+    ]);
+
+    const cardStaggerAnimation = createStaggeredAnimation(
+      cardAnimations.map((anim, index) => 
+        Animated.parallel([
+          createFadeIn(anim.opacity, ANIMATIONS.DURATION.normal),
+          Animated.timing(anim.translateY, {
+            toValue: 0,
+            duration: ANIMATIONS.DURATION.normal,
+            easing: NBCONEasing.smooth,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim.scale, {
+            toValue: 1,
+            duration: ANIMATIONS.DURATION.normal,
+            easing: NBCONEasing.bounce,
+            useNativeDriver: true,
+          }),
+        ])
+      ),
+      100,
+      300
+    );
+
+    // Chain animations
+    Animated.sequence([
+      headerAnimation,
+      Animated.delay(200),
+      cardStaggerAnimation,
+    ]).start();
+  }, []);
+
+  // Animate button when role is selected
+  useEffect(() => {
+    if (selectedRole) {
+      Animated.parallel([
+        Animated.spring(buttonOpacity, {
+          toValue: 1,
+          tension: 120,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.spring(buttonScale, {
+          toValue: 1,
+          tension: 150,
+          friction: 6,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(buttonOpacity, {
+          toValue: 0,
+          duration: ANIMATIONS.DURATION.fast,
+          easing: NBCONEasing.sharp,
+          useNativeDriver: true,
+        }),
+        Animated.timing(buttonScale, {
+          toValue: 0.8,
+          duration: ANIMATIONS.DURATION.fast,
+          easing: NBCONEasing.sharp,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [selectedRole]);
+
+  const handleRoleSelect = (role: UserRole, index: number) => {
+    // Animate the selected card
+    const selectedAnim = cardAnimations[index];
+    
+    // Reset previous selection animations
+    cardAnimations.forEach((anim, i) => {
+      if (i !== index) {
+        Animated.parallel([
+          Animated.timing(anim.scale, {
+            toValue: 1,
+            duration: ANIMATIONS.DURATION.fast,
+            easing: NBCONEasing.smooth,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim.elevation, {
+            toValue: 2,
+            duration: ANIMATIONS.DURATION.fast,
+            easing: NBCONEasing.smooth,
+            useNativeDriver: false,
+          }),
+        ]).start();
+      }
+    });
+
+    // Animate selected card
+    createCardSelectAnimation(
+      selectedAnim.scale,
+      selectedAnim.elevation,
+      true
+    ).start();
+
     setSelectedRole(role);
   };
 
@@ -105,7 +236,15 @@ const RoleSelectionScreen: React.FC<Props> = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <Animated.View 
+          style={[
+            styles.header,
+            {
+              opacity: headerOpacity,
+              transform: [{ translateY: headerTranslateY }],
+            },
+          ]}
+        >
           <Text style={[styles.title, { color: theme.text }]}>
             {isArabic ? 'اختر نوع حسابك' : 'Choose Your Account Type'}
           </Text>
@@ -115,21 +254,43 @@ const RoleSelectionScreen: React.FC<Props> = ({ navigation }) => {
               : 'Select the type that best fits your needs'
             }
           </Text>
-        </View>
+        </Animated.View>
 
         {/* Role Cards */}
         <View style={styles.roleCards}>
-          {roleOptions.map((role) => (
-            <TouchableOpacity
-              key={role.id}
-              style={[
-                styles.roleCard,
-                { backgroundColor: theme.card },
-                selectedRole === role.id && { borderColor: role.color, borderWidth: 2 },
-              ]}
-              onPress={() => handleRoleSelect(role.id)}
-              activeOpacity={0.7}
-            >
+          {roleOptions.map((role, index) => {
+            const anim = cardAnimations[index];
+            return (
+              <Animated.View
+                key={role.id}
+                style={{
+                  opacity: anim.opacity,
+                  transform: [
+                    { translateY: anim.translateY },
+                    { scale: anim.scale },
+                  ],
+                }}
+              >
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.roleCard,
+                    {
+                      backgroundColor: theme.card,
+                      elevation: pressed ? 8 : (selectedRole === role.id ? 6 : 2),
+                    },
+                    selectedRole === role.id && { 
+                      borderColor: role.color, 
+                      borderWidth: 2,
+                      shadowColor: role.color,
+                      shadowOpacity: 0.2,
+                    },
+                  ]}
+                  onPress={() => handleRoleSelect(role.id, index)}
+                  android_ripple={{
+                    color: role.color + '20',
+                    borderless: false,
+                  }}
+                >
               {/* Card Header */}
               <View style={styles.cardHeader}>
                 <View style={[styles.iconContainer, { backgroundColor: role.color }]}>
@@ -165,35 +326,68 @@ const RoleSelectionScreen: React.FC<Props> = ({ navigation }) => {
                 ))}
               </View>
 
-              {/* Selection Indicator */}
-              {selectedRole === role.id && (
-                <View style={[styles.selectedIndicator, { backgroundColor: role.color }]} />
-              )}
-            </TouchableOpacity>
-          ))}
+                  {/* Selection Indicator */}
+                  {selectedRole === role.id && (
+                    <Animated.View 
+                      style={[
+                        styles.selectedIndicator, 
+                        { backgroundColor: role.color }
+                      ]}
+                      entering={{
+                        opacity: { from: 0, to: 1, duration: ANIMATIONS.DURATION.normal },
+                        scaleX: { from: 0, to: 1, duration: ANIMATIONS.DURATION.normal },
+                      }}
+                    />
+                  )}
+                </Pressable>
+              </Animated.View>
+            );
+          })}
         </View>
 
         {/* Continue Button */}
-        {selectedRole && (
-          <TouchableOpacity
-            style={[
+        <Animated.View
+          style={{
+            opacity: buttonOpacity,
+            transform: [{ scale: buttonScale }],
+          }}
+          pointerEvents={selectedRole ? 'auto' : 'none'}
+        >
+          <Pressable
+            style={({ pressed }) => [
               styles.continueButton,
               { 
-                backgroundColor: roleOptions.find(r => r.id === selectedRole)?.color || COLORS.primary 
+                backgroundColor: roleOptions.find(r => r.id === selectedRole)?.color || COLORS.primary,
+                transform: [{ scale: pressed ? 0.96 : 1 }],
               }
             ]}
             onPress={handleContinue}
+            android_ripple={{
+              color: COLORS.white + '30',
+              borderless: false,
+            }}
           >
             <Text style={styles.continueButtonText}>
               {isArabic ? 'متابعة' : 'Continue'}
             </Text>
-            <Ionicons 
-              name={isArabic ? "arrow-back" : "arrow-forward"} 
-              size={20} 
-              color={COLORS.white} 
-            />
-          </TouchableOpacity>
-        )}
+            <Animated.View
+              style={{
+                transform: [{
+                  translateX: buttonScale.interpolate({
+                    inputRange: [0.8, 1],
+                    outputRange: [-10, 0],
+                  })
+                }],
+              }}
+            >
+              <Ionicons 
+                name={isArabic ? "arrow-back" : "arrow-forward"} 
+                size={20} 
+                color={COLORS.white} 
+              />
+            </Animated.View>
+          </Pressable>
+        </Animated.View>
 
         {/* Footer */}
         <View style={styles.footer}>

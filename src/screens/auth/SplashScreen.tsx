@@ -317,7 +317,4 @@ const styles = StyleSheet.create({
   },
 });
 
-// Import BORDER_RADIUS from constants
-const { BORDER_RADIUS } = require('../../constants');
-
 export default SplashScreen;

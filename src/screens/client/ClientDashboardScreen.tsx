@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   FlatList,
   Dimensions,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
@@ -14,7 +15,10 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { Language } from '../../types';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS } from '../../constants';
+import { ANIMATIONS } from '../../constants/animations';
+import { createFadeInUp, createStaggeredFadeIn, createScaleIn } from '../../utils/animations';
 import CustomButton from '../../components/forms/CustomButton';
+import { AnimatedCard } from '../../components/animated/AnimatedCard';
 
 const { width } = Dimensions.get('window');
 
@@ -32,9 +36,39 @@ interface Project {
 const ClientDashboardScreen: React.FC = () => {
   const { language, isDarkMode } = useSelector((state: RootState) => state.app);
   const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'messages'>('overview');
+  
+  // Animation refs  
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const quickActionAnimations = useRef([0, 1, 2, 3].map(() => new Animated.Value(0))).current;
+  const projectAnimations = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
+  const statsAnimations = useRef({
+    totalSpent: new Animated.Value(0),
+    activeProjects: new Animated.Value(0),
+    completedProjects: new Animated.Value(0),
+    averageRating: new Animated.Value(0),
+  }).current;
 
   const isArabic = language === Language.ARABIC;
   const theme = isDarkMode ? COLORS.dark : COLORS.light;
+  
+  // Initialize animations on mount
+  useEffect(() => {
+    const initAnimations = Animated.parallel([
+      createFadeInUp(fadeAnim, slideAnim, ANIMATIONS.DURATION.normal),
+      createStaggeredFadeIn(quickActionAnimations, ANIMATIONS.DURATION.fast, 100),
+      createStaggeredFadeIn(Object.values(statsAnimations), ANIMATIONS.DURATION.fast, 150),
+    ]);
+    
+    initAnimations.start();
+  }, []);
+  
+  // Animate projects when tab changes
+  useEffect(() => {
+    if (activeTab === 'projects') {
+      createStaggeredFadeIn(projectAnimations, ANIMATIONS.DURATION.normal, 100).start();
+    }
+  }, [activeTab]);
 
   const getText = (textObj: { en: string; ar: string }) => {
     return isArabic ? textObj.ar : textObj.en;
@@ -113,81 +147,191 @@ const ClientDashboardScreen: React.FC = () => {
   ];
 
   const renderStatsCard = () => (
-    <View style={[styles.statsCard, { backgroundColor: theme.surface }]}>
+    <AnimatedCard delay={200} style={[styles.statsCard, { backgroundColor: theme.surface }]}>
       <Text style={[styles.statsTitle, { color: theme.text }]}>
         {isArabic ? 'إحصائياتك' : 'Your Stats'}
       </Text>
       
       <View style={styles.statsGrid}>
-        <View style={styles.statItem}>
+        <Animated.View 
+          style={[
+            styles.statItem,
+            {
+              opacity: statsAnimations.totalSpent,
+              transform: [
+                {
+                  scale: statsAnimations.totalSpent.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
           <Text style={[styles.statValue, { color: COLORS.primary }]}>
             {stats.totalSpent.toLocaleString()} SAR
           </Text>
           <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
             {isArabic ? 'إجمالي الإنفاق' : 'Total Spent'}
           </Text>
-        </View>
+        </Animated.View>
         
-        <View style={styles.statItem}>
+        <Animated.View 
+          style={[
+            styles.statItem,
+            {
+              opacity: statsAnimations.activeProjects,
+              transform: [
+                {
+                  scale: statsAnimations.activeProjects.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
           <Text style={[styles.statValue, { color: COLORS.secondary }]}>
             {stats.activeProjects}
           </Text>
           <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
             {isArabic ? 'مشاريع نشطة' : 'Active Projects'}
           </Text>
-        </View>
+        </Animated.View>
         
-        <View style={styles.statItem}>
+        <Animated.View 
+          style={[
+            styles.statItem,
+            {
+              opacity: statsAnimations.completedProjects,
+              transform: [
+                {
+                  scale: statsAnimations.completedProjects.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
           <Text style={[styles.statValue, { color: COLORS.success }]}>
             {stats.completedProjects}
           </Text>
           <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
             {isArabic ? 'مشاريع مكتملة' : 'Completed'}
           </Text>
-        </View>
+        </Animated.View>
         
-        <View style={styles.statItem}>
+        <Animated.View 
+          style={[
+            styles.statItem,
+            {
+              opacity: statsAnimations.averageRating,
+              transform: [
+                {
+                  scale: statsAnimations.averageRating.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
           <Text style={[styles.statValue, { color: COLORS.warning }]}>
             {stats.averageRating} ⭐
           </Text>
           <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
             {isArabic ? 'التقييم المتوسط' : 'Avg Rating'}
           </Text>
-        </View>
+        </Animated.View>
       </View>
-    </View>
+    </AnimatedCard>
   );
 
   const renderQuickActions = () => (
-    <View style={styles.quickActionsSection}>
+    <AnimatedCard delay={300} style={styles.quickActionsSection}>
       <Text style={[styles.sectionTitle, { color: theme.text }]}>
         {isArabic ? 'إجراءات سريعة' : 'Quick Actions'}
       </Text>
       
       <View style={styles.quickActionsGrid}>
-        {quickActions.map((action) => (
-          <TouchableOpacity
+        {quickActions.map((action, index) => (
+          <Animated.View
             key={action.id}
-            style={[styles.quickActionCard, { backgroundColor: theme.surface }]}
-            onPress={action.onPress}
+            style={{
+              opacity: quickActionAnimations[index],
+              transform: [
+                {
+                  translateY: quickActionAnimations[index].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [30, 0],
+                  }),
+                },
+                {
+                  scale: quickActionAnimations[index].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  }),
+                },
+              ],
+            }}
           >
-            <View style={[styles.actionIcon, { backgroundColor: action.color }]}>
-              <Ionicons name={action.icon as any} size={24} color="white" />
-            </View>
-            <Text style={[styles.actionTitle, { color: theme.text }]}>
-              {getText(action.title)}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickActionCard, { backgroundColor: theme.surface }]}
+              onPress={action.onPress}
+              activeOpacity={0.8}
+            >
+              <Animated.View 
+                style={[
+                  styles.actionIcon, 
+                  { 
+                    backgroundColor: action.color,
+                    transform: [
+                      {
+                        scale: quickActionAnimations[index].interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.5, 1],
+                        }),
+                      },
+                    ],
+                  }
+                ]}
+              >
+                <Ionicons name={action.icon as any} size={24} color="white" />
+              </Animated.View>
+              <Text style={[styles.actionTitle, { color: theme.text }]}>
+                {getText(action.title)}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
         ))}
       </View>
-    </View>
+    </AnimatedCard>
   );
 
-  const renderProjectCard = ({ item }: { item: Project }) => (
-    <TouchableOpacity
-      style={[styles.projectCard, { backgroundColor: theme.surface }]}
-      onPress={() => console.log('Open project:', item.id)}
+  const renderProjectCard = ({ item, index }: { item: Project; index: number }) => (
+    <Animated.View
+      style={{
+        opacity: projectAnimations[index] || 1,
+        transform: [
+          {
+            translateY: projectAnimations[index]?.interpolate({
+              inputRange: [0, 1],
+              outputRange: [20, 0],
+            }) || 0,
+          },
+        ],
+      }}
     >
+      <TouchableOpacity
+        style={[styles.projectCard, { backgroundColor: theme.surface }]}
+        onPress={() => console.log('Open project:', item.id)}
+        activeOpacity={0.9}
+      >
       <View style={styles.projectHeader}>
         <Text style={[styles.projectTitle, { color: theme.text }]}>
           {item.title}
@@ -248,7 +392,8 @@ const ClientDashboardScreen: React.FC = () => {
           </View>
         </View>
       )}
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </Animated.View>
   );
 
   const getStatusColor = (status: string) => {
@@ -299,7 +444,7 @@ const ClientDashboardScreen: React.FC = () => {
               
               <FlatList
                 data={mockProjects.slice(0, 2)}
-                renderItem={renderProjectCard}
+                renderItem={({ item, index }) => renderProjectCard({ item, index })}
                 keyExtractor={(item) => item.id}
                 showsVerticalScrollIndicator={false}
                 scrollEnabled={false}
@@ -312,7 +457,7 @@ const ClientDashboardScreen: React.FC = () => {
         return (
           <FlatList
             data={mockProjects}
-            renderItem={renderProjectCard}
+            renderItem={({ item, index }) => renderProjectCard({ item, index })}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.projectsList}
@@ -343,7 +488,13 @@ const ClientDashboardScreen: React.FC = () => {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <Animated.View style={[
+        styles.header,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        },
+      ]}>
         <View>
           <Text style={[styles.greeting, { color: theme.textSecondary }]}>
             {isArabic ? 'مرحباً' : 'Welcome back'}
@@ -357,17 +508,18 @@ const ClientDashboardScreen: React.FC = () => {
           <Ionicons name="notifications" size={24} color={theme.text} />
           <View style={styles.notificationBadge} />
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
       {/* Quick Post Button */}
-      <View style={styles.quickPostContainer}>
+      <AnimatedCard delay={100} style={styles.quickPostContainer}>
         <CustomButton
-          title={{ en: '+ Post New Job', ar: '+ نشر وظيفة جديدة' }}
+          title={isArabic ? '+ نشر وظيفة جديدة' : '+ Post New Job'}
           onPress={() => console.log('Post new job')}
           icon="add"
           fullWidth
+          animationType="scale"
         />
-      </View>
+      </AnimatedCard>
 
       {/* Tabs */}
       <View style={styles.tabs}>

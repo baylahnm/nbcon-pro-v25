@@ -197,24 +197,24 @@ const SubscriptionPlansScreen: React.FC = () => {
         </Text>
       </View>
     </ScrollView>
-  );
-};
+    );
+  };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
     backgroundColor: '#1a1a1a',
-    padding: 20,
-  },
+      padding: 20,
+    },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+      fontWeight: 'bold',
     color: '#ffffff',
     marginBottom: 10,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
+      fontSize: 16,
     color: '#cccccc',
     marginBottom: 30,
     textAlign: 'center',
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   currentPlanCard: {
     backgroundColor: '#2a2a2a',
-    borderRadius: 12,
+      borderRadius: 12,
     padding: 20,
     marginBottom: 30,
   },
@@ -235,8 +235,8 @@ const styles = StyleSheet.create({
   currentPlanInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+      alignItems: 'center',
+    },
   currentPlanDetails: {
     flex: 1,
   },
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   currentPlanStatus: {
-    fontSize: 14,
+      fontSize: 14,
     color: '#cccccc',
   },
   currentPlanActions: {
@@ -276,60 +276,60 @@ const styles = StyleSheet.create({
   },
   plansContainer: {
     marginBottom: 30,
-  },
-  planCard: {
+    },
+    planCard: {
     backgroundColor: '#2a2a2a',
     borderRadius: 12,
-    padding: 20,
+      padding: 20,
     marginBottom: 20,
     position: 'relative',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
+      borderWidth: 2,
+      borderColor: 'transparent',
+    },
   popularPlanCard: {
     borderColor: '#007bff',
-  },
+    },
   selectedPlanCard: {
     borderColor: '#28a745',
-  },
-  popularBadge: {
-    position: 'absolute',
+    },
+    popularBadge: {
+      position: 'absolute',
     top: -10,
     left: 20,
-    right: 20,
+      right: 20,
     backgroundColor: '#007bff',
     paddingVertical: 5,
     paddingHorizontal: 15,
     borderRadius: 15,
     alignItems: 'center',
-  },
-  popularText: {
+    },
+    popularText: {
     color: '#ffffff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  planHeader: {
+      fontSize: 12,
+      fontWeight: 'bold',
+    },
+    planHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
-  },
-  planName: {
+    },
+    planName: {
     fontSize: 24,
-    fontWeight: 'bold',
+      fontWeight: 'bold',
     color: '#ffffff',
-  },
+    },
   planPrice: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
+      flexDirection: 'row',
+      alignItems: 'baseline',
+    },
   priceAmount: {
-    fontSize: 32,
-    fontWeight: 'bold',
+      fontSize: 32,
+      fontWeight: 'bold',
     color: '#ffffff',
-  },
+    },
   pricePeriod: {
-    fontSize: 16,
+      fontSize: 16,
     color: '#cccccc',
     marginLeft: 5,
   },
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   },
   featuresTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+      fontWeight: 'bold',
     color: '#ffffff',
     marginBottom: 10,
   },
@@ -359,8 +359,8 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   limitationsContainer: {
-    marginBottom: 20,
-  },
+      marginBottom: 20,
+    },
   limitationsTitle: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -368,10 +368,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   limitationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
   limitationText: {
     fontSize: 14,
     color: '#dc3545',
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
   },
   billingFeatureText: {
     color: '#ffffff',
-    fontSize: 14,
+      fontSize: 14,
     marginLeft: 10,
   },
   upgradeButton: {
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginLeft: 10,
     flex: 1,
-  },
-});
+    },
+  });
 
 export default SubscriptionPlansScreen;
